@@ -1,0 +1,17 @@
+{
+  "devDependencies": {
+    "@types/nodemailer": "^8.0.1",
+    "appium-mcp": "^1.87.4",
+    "dotenv": "^17.4.2",
+    "nodemailer": "^9.0.5",
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "webdriverio": "^9.30.1"
+  },
+  "scripts": {
+    "test:ios": "mvn clean test -Denv=qa -Dplatform=ios ; node utils/send-report.js",
+    "test:android": "mvn clean test -Denv=qa -Dplatform=android ; node utils/send-report.js",
+    "test:parallel": "mvn clean test -Denv=qa -DsuiteXmlFile=testng-parallel.xml ; node utils/send-report.js"
+  }
+}

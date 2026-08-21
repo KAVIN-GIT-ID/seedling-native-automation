@@ -22,3 +22,7 @@ test-output/
 # AI Agent workspace
 .agents/
 *.log
+
+# Ignore README
+README.md
+

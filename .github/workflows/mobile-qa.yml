@@ -12,14 +12,14 @@ on:
           - ios
         default: 'android'
       component:
-        description: 'Test class to run on QA'
+        description: 'Test file to run on QA'
         type: choice
         required: true
         options:
-          - all
+          - all (runs all QA tests)
           - com.company.automation.tests.LoginTests
           - com.company.automation.tests.SeedlingCreationTests
-        default: 'all'
+        default: 'all (runs all QA tests)'
 
 jobs:
   test:
@@ -50,21 +50,17 @@ jobs:
           appium -v
 
       # Android Setup
-      - name: Setup Android Driver & Emulator
+      - name: Setup Android Driver & APK
         if: ${{ github.event.inputs.platform == 'android' }}
         run: |
           appium driver install uiautomator2
-
-      - name: Ensure Android QA APK Available
-        if: ${{ github.event.inputs.platform == 'android' }}
-        run: |
           mkdir -p apps/qa
-          if ! ls apps/*.apk apps/qa/*.apk 1> /dev/null 2>&1; then
+          if ! ls apps/qa/*.apk apps/*.apk 1> /dev/null 2>&1; then
             echo "Downloading QA APK from Google Drive..."
             python3 -m pip install --quiet gdown
             gdown 1dDV9FrZieZXvqcirdp5Brm_pPrYzu1Mf -O apps/qa/seedling-dev.apk
           else
-            echo "Found existing APK file in apps/ folder."
+            echo "Found existing APK file in apps folder."
           fi
 
       # iOS Setup
@@ -74,7 +70,7 @@ jobs:
           appium driver install xcuitest
           
           # Unpack iOS App if zipped
-          for zipfile in apps/*.zip apps/qa/*.zip; do
+          for zipfile in apps/qa/*.zip apps/*.zip; do
             if [ -f "$zipfile" ]; then
               echo "Unpacking $zipfile into apps/qa/..."
               mkdir -p apps/qa
@@ -103,7 +99,7 @@ jobs:
           PLATFORM="${{ github.event.inputs.platform }}"
           COMP="${{ github.event.inputs.component }}"
 
-          if [ "$COMP" = "all" ]; then
+          if [[ "$COMP" == *"all"* ]]; then
             CMD="mvn test -Denv=qa -Dplatform=$PLATFORM -Dexecution=ci -DsuiteXmlFile=testng-qa.xml"
           else
             CMD="mvn test -Denv=qa -Dplatform=$PLATFORM -Dexecution=ci -Dtest=$COMP -DsuiteXmlFile="
@@ -112,7 +108,7 @@ jobs:
           echo "TEST_COMMAND=$CMD" >> $GITHUB_ENV
           echo "Selected Command: $CMD"
 
-      # Execute Tests (Android uses reactivecircus on macos runner, iOS runs directly on booted sim)
+      # Execute Tests (Android uses reactivecircus emulator, iOS runs directly on simulator)
       - name: Run Android Tests on Emulator
         if: ${{ github.event.inputs.platform == 'android' }}
         uses: reactivecircus/android-emulator-runner@v2
@@ -132,7 +128,7 @@ jobs:
           ${{ env.TEST_COMMAND }} 2>&1 | tee test-output.log
           exit ${PIPESTATUS[0]}
 
-      - name: Upload ExtentReports Artifact
+      - name: Upload Test Report
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
@@ -169,11 +165,11 @@ jobs:
           echo "" >> email-body.txt
 
           if [ "${{ job.status }}" != "success" ]; then
-            echo "=== TEST FAILURES / BREAKPOINTS ===" >> email-body.txt
+            echo "=== TEST FAILURES ===" >> email-body.txt
             if [ -f test-output.log ]; then
               grep -E "FAILURE|ERROR|Exception|AssertionError" test-output.log | head -20 >> email-body.txt || echo "See ExtentReport for failure screenshot." >> email-body.txt
             fi
-            echo "===================================" >> email-body.txt
+            echo "=====================" >> email-body.txt
             echo "" >> email-body.txt
           fi
 
@@ -191,7 +187,7 @@ jobs:
           server_port: 465
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "Mobile QA [${{ github.event.inputs.platform }}] Run ${{ job.status }} - Component: ${{ github.event.inputs.component }}"
+          subject: "Mobile QA [${{ github.event.inputs.platform }}] Run ${{ job.status }} - ${{ github.event.inputs.component }}"
           to: ${{ secrets.TL_EMAIL }}
           from: Seedling Automation <${{ secrets.EMAIL_USERNAME }}>
           body: file://email-body.txt

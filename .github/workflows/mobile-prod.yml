@@ -12,7 +12,7 @@ on:
           - ios
         default: 'android'
       component:
-        description: 'Test file to run on PROD (Read-Only)'
+        description: 'Test file to run on PROD'
         type: choice
         required: true
         options:
@@ -59,7 +59,7 @@ jobs:
         run: |
           mkdir -p apps/prod
           if ! ls apps/prod/*.apk apps/*.apk 1> /dev/null 2>&1; then
-            echo "No PROD APK found in apps/prod/. Please place seedling-prod.apk in apps/prod/ or apps/."
+            echo "No PROD APK found in apps/prod/. Place seedling-prod.apk in apps/prod/ or apps/."
           else
             echo "Found PROD APK file in apps folder."
           fi
@@ -100,7 +100,7 @@ jobs:
           PLATFORM="${{ github.event.inputs.platform }}"
           COMP="${{ github.event.inputs.component }}"
 
-          if [ "$COMP" = "all (runs all read-only tests)" ]; then
+          if [[ "$COMP" == *"all"* ]]; then
             CMD="mvn test -Denv=prod -Dplatform=$PLATFORM -Dexecution=ci -DsuiteXmlFile=testng-prod.xml"
           else
             CMD="mvn test -Denv=prod -Dplatform=$PLATFORM -Dexecution=ci -Dtest=$COMP -DsuiteXmlFile="
@@ -109,7 +109,7 @@ jobs:
           echo "TEST_COMMAND=$CMD" >> $GITHUB_ENV
           echo "Selected Command: $CMD"
 
-      # Execute Tests (Android uses reactivecircus on macos runner, iOS runs directly on booted sim)
+      # Execute Tests (Android uses reactivecircus emulator, iOS runs directly on simulator)
       - name: Run Android Tests on Emulator
         if: ${{ github.event.inputs.platform == 'android' }}
         uses: reactivecircus/android-emulator-runner@v2
@@ -129,7 +129,7 @@ jobs:
           ${{ env.TEST_COMMAND }} 2>&1 | tee test-output.log
           exit ${PIPESTATUS[0]}
 
-      - name: Upload ExtentReports Artifact
+      - name: Upload Test Report
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
@@ -166,11 +166,11 @@ jobs:
           echo "" >> email-body.txt
 
           if [ "${{ job.status }}" != "success" ]; then
-            echo "=== TEST FAILURES / BREAKPOINTS ===" >> email-body.txt
+            echo "=== TEST FAILURES ===" >> email-body.txt
             if [ -f test-output.log ]; then
               grep -E "FAILURE|ERROR|Exception|AssertionError" test-output.log | head -20 >> email-body.txt || echo "See ExtentReport for failure screenshot." >> email-body.txt
             fi
-            echo "===================================" >> email-body.txt
+            echo "=====================" >> email-body.txt
             echo "" >> email-body.txt
           fi
 
@@ -188,7 +188,7 @@ jobs:
           server_port: 465
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "Mobile PROD [${{ github.event.inputs.platform }}] Run ${{ job.status }} - Component: ${{ github.event.inputs.component }}"
+          subject: "Mobile PROD [${{ github.event.inputs.platform }}] Run ${{ job.status }} - ${{ github.event.inputs.component }}"
           to: ${{ secrets.TL_EMAIL }}
           from: Seedling Automation <${{ secrets.EMAIL_USERNAME }}>
           body: file://email-body.txt

@@ -51,6 +51,16 @@ jobs:
         with:
           node-version: 20
 
+      - name: Setup Test Credentials
+        run: |
+          mkdir -p config
+          echo "qa.username=${{ secrets.QA_USERNAME || 'kavinap@uit.ac.in' }}" > config/credentials.properties
+          echo "qa.password=${{ secrets.QA_PASSWORD || 'Uit@1234567890' }}" >> config/credentials.properties
+          echo "prod.username=${{ secrets.PROD_USERNAME || '' }}" >> config/credentials.properties
+          echo "prod.password=${{ secrets.PROD_PASSWORD || '' }}" >> config/credentials.properties
+          echo "ios.devicePasscode=000000" >> config/credentials.properties
+
+
       - name: Install Appium
         run: |
           npm install -g appium

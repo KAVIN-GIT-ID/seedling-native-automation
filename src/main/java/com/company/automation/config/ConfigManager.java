@@ -78,13 +78,15 @@ public final class ConfigManager {
     }
 
     public static String credential(String key) {
-        String value = credentialProps.getProperty(key);
+        String envKey = key.toUpperCase().replace('.', '_');
+        String value = resolve(key, envKey, credentialProps, key, null);
         if (value == null) {
             throw new RuntimeException("Missing credential: " + key
-                    + ". Copy config/credentials.properties.template to config/credentials.properties and fill it in.");
+                    + ". Copy config/credentials.properties.template to config/credentials.properties and fill it in, or pass via GitHub Secrets/env vars.");
         }
         return value;
     }
+
 
     /**
      * Resolves property with order: System Property -> Environment Variable -> Config File -> Default

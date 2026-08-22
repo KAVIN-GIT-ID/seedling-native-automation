@@ -8,6 +8,10 @@ screenshots/
 
 # Never commit real credentials - only the .template file is tracked
 config/credentials.properties
+config/cloud.properties
+
+# Ignore large APK files (>100MB) from git (CI downloads automatically)
+apps/*.apk
 
 # Node and environment files
 node_modules/

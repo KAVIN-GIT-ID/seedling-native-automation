@@ -59,6 +59,28 @@ public class LoginPage extends BasePage implements ILoginPage {
     }
 
     @Override
+    public void tapGoogleSignIn() {
+        logStep("Google Sign-In on Android");
+        By googleBtn = AppiumBy.xpath("//*[contains(@content-desc, 'Google') or contains(@text, 'Google')]");
+        tap(googleBtn, "Sign In with Google (Android)");
+    }
+
+    @Override
+    public void tapAppleSignIn() {
+        logStep("Apple Sign-In on Android (Web OAuth)");
+        // Android fallback for Apple sign-in webview / custom tabs
+        By appleBtn = AppiumBy.xpath("//*[contains(@content-desc, 'Apple') or contains(@text, 'Apple')]");
+        tap(appleBtn, "Sign In with Apple (Android)");
+    }
+
+    @Override
+    public void tapXSignIn() {
+        logStep("X (Twitter) Sign-In on Android");
+        By xBtn = AppiumBy.xpath("//*[contains(@content-desc, 'Twitter') or contains(@content-desc, 'X') or contains(@text, 'Twitter')]");
+        tap(xBtn, "Sign In with X (Android)");
+    }
+
+    @Override
     public boolean isErrorDisplayed() {
         return isDisplayed(errorMessage);
     }

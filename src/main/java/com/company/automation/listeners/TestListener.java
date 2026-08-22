@@ -32,27 +32,51 @@ public class TestListener implements ITestListener {
 
     @Override
     public void onTestSuccess(ITestResult result) {
-        ExtentManager.getTest().log(Status.PASS, "Test Passed");
+        if (ExtentManager.getTest() != null) {
+            ExtentManager.getTest().log(Status.PASS, "🎉 Test Passed Successfully: " + result.getMethod().getMethodName());
+            try {
+                String base64 = ScreenshotUtils.captureBase64(DriverManager.getDriver());
+                if (base64 != null) {
+                    ExtentManager.getTest().addScreenCaptureFromBase64String(base64, "Final Verified State");
+                }
+            } catch (Exception ignored) {}
+        }
+        ExtentManager.getReporter().flush();
     }
 
     @Override
     public void onTestFailure(ITestResult result) {
-        ExtentManager.getTest().log(Status.FAIL, "Test Failed: " + result.getThrowable());
+        Throwable throwable = result.getThrowable();
+        String errorMsg = (throwable != null) ? throwable.getMessage() : "Unknown Error";
         
-        try {
-            // Attach Base64 screenshot on failure
-            String base64Screenshot = ScreenshotUtils.captureBase64(DriverManager.getDriver());
-            if (base64Screenshot != null) {
-                ExtentManager.getTest().addScreenCaptureFromBase64String(base64Screenshot, "Failure Screenshot");
+        System.err.println("❌ [TEST FAILED] " + result.getMethod().getMethodName() + ": " + errorMsg);
+
+        if (ExtentManager.getTest() != null) {
+            ExtentManager.getTest().log(Status.FAIL, "❌ <b>Test Failed at Step:</b> " + errorMsg);
+            
+            try {
+                // Attach Base64 screenshot on failure showing the exact breakpoint
+                String base64Screenshot = ScreenshotUtils.captureBase64(DriverManager.getDriver());
+                if (base64Screenshot != null) {
+                    ExtentManager.getTest().addScreenCaptureFromBase64String(base64Screenshot, "❌ Failure Breakpoint Screenshot");
+                }
+            } catch (Exception e) {
+                ExtentManager.getTest().log(Status.WARNING, "Failed to capture failure screenshot: " + e.getMessage());
             }
-        } catch (Exception e) {
-            ExtentManager.getTest().log(Status.WARNING, "Failed to capture screenshot: " + e.getMessage());
+
+            if (throwable != null) {
+                ExtentManager.getTest().fail(throwable);
+            }
         }
+        ExtentManager.getReporter().flush();
     }
 
     @Override
     public void onTestSkipped(ITestResult result) {
-        ExtentManager.getTest().log(Status.SKIP, "Test Skipped: " + result.getThrowable());
+        if (ExtentManager.getTest() != null) {
+            ExtentManager.getTest().log(Status.SKIP, "⚠️ Test Skipped: " + result.getThrowable());
+        }
+        ExtentManager.getReporter().flush();
     }
 
     @Override

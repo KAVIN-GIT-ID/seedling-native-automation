@@ -1,0 +1,26 @@
+# ==========================================
+# Cloud Device Farm Configuration Template
+# ==========================================
+
+# BrowserStack Credentials (or set env vars BROWSERSTACK_USERNAME / BROWSERSTACK_ACCESS_KEY)
+browserstack.user=your_browserstack_username
+browserstack.key=your_browserstack_access_key
+browserstack.server=hub-cloud.browserstack.com
+
+# Uploaded App URL on BrowserStack (e.g. bs://<app-id>) or local path
+browserstack.app.android=bs://your_android_app_id
+browserstack.app.ios=bs://your_ios_app_id
+
+# Target Devices for BrowserStack
+browserstack.android.device=Google Pixel 7
+browserstack.android.os_version=13.0
+browserstack.ios.device=iPhone 15
+browserstack.ios.os_version=17.0
+
+# Project & Build Metadata for Cloud Dashboard
+browserstack.project=Seedling Native Mobile App
+browserstack.build=Seedling Build 1.0
+
+# LambdaTest Credentials (optional if using LambdaTest instead)
+# lambdatest.user=your_lambdatest_username
+# lambdatest.key=your_lambdatest_access_key

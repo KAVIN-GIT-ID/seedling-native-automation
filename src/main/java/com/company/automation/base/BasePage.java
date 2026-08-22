@@ -133,4 +133,39 @@ public abstract class BasePage {
             com.company.automation.reports.ExtentManager.getTest().info(message);
         }
     }
+
+    public void logStepWithScreenshot(String message) {
+        logStep(message);
+        takeScreenshot(message);
+    }
+
+    public void logVerification(String checkName, boolean condition) {
+        String platform = DriverManager.getPlatform().toUpperCase();
+        if (condition) {
+            String passMsg = "✅ [VERIFIED][" + platform + "] " + checkName;
+            System.out.println(passMsg);
+            if (com.company.automation.reports.ExtentManager.getTest() != null) {
+                com.company.automation.reports.ExtentManager.getTest().pass(passMsg);
+            }
+        } else {
+            String failMsg = "❌ [VERIFICATION FAILED][" + platform + "] " + checkName;
+            System.err.println(failMsg);
+            if (com.company.automation.reports.ExtentManager.getTest() != null) {
+                com.company.automation.reports.ExtentManager.getTest().fail(failMsg);
+                takeScreenshot("Failure: " + checkName);
+            }
+            org.testng.Assert.fail(failMsg);
+        }
+    }
+
+    public void takeScreenshot(String title) {
+        try {
+            String base64 = com.company.automation.utils.ScreenshotUtils.captureBase64(driver());
+            if (base64 != null && com.company.automation.reports.ExtentManager.getTest() != null) {
+                com.company.automation.reports.ExtentManager.getTest().addScreenCaptureFromBase64String(base64, title);
+            }
+        } catch (Exception e) {
+            System.err.println("Could not capture screenshot for '" + title + "': " + e.getMessage());
+        }
+    }
 }

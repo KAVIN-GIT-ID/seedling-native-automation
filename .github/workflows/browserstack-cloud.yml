@@ -1,0 +1,84 @@
+name: BrowserStack Cloud Device Farm Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Target Mobile Platform'
+        required: true
+        default: 'android'
+        type: choice
+        options:
+          - android
+          - ios
+      env:
+        description: 'Target Environment'
+        required: true
+        default: 'qa'
+        type: choice
+        options:
+          - qa
+          - prod
+      suite:
+        description: 'TestNG Suite XML file'
+        required: true
+        default: 'testng-qa.xml'
+        type: string
+      device:
+        description: 'Cloud Device Name (e.g. Google Pixel 7 or iPhone 15)'
+        required: false
+        default: ''
+        type: string
+      os_version:
+        description: 'Cloud OS Version (e.g. 13.0 or 17.0)'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  browserstack-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: Run Tests on BrowserStack
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+        run: |
+          DEVICE_ARG=""
+          OS_ARG=""
+          if [ -n "${{ github.event.inputs.device }}" ]; then
+            DEVICE_ARG="-DdeviceName=\"${{ github.event.inputs.device }}\""
+          fi
+          if [ -n "${{ github.event.inputs.os_version }}" ]; then
+            OS_ARG="-DplatformVersion=\"${{ github.event.inputs.os_version }}\""
+          fi
+
+          mvn test \
+            -Denv=${{ github.event.inputs.env }} \
+            -Dplatform=${{ github.event.inputs.platform }} \
+            -Dexecution=browserstack \
+            -DsuiteXmlFile=${{ github.event.inputs.suite }} \
+            $DEVICE_ARG $OS_ARG
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browserstack-test-reports
+          path: |
+            target/index.html
+            target/surefire-reports/
+            logs/
+          retention-days: 14

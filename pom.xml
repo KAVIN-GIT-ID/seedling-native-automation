@@ -14,9 +14,10 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- Default run settings - override on command line with -Denv=prod -Dplatform=ios -->
+        <!-- Default run settings - override on command line with -Denv=prod -Dplatform=ios -Dexecution=ci -->
         <env>qa</env>
         <platform>android</platform>
+        <execution>local</execution>
         <suiteXmlFile>testng-qa.xml</suiteXmlFile>
     </properties>
 
@@ -73,6 +74,7 @@
                     <systemPropertyVariables>
                         <env>${env}</env>
                         <platform>${platform}</platform>
+                        <execution>${execution}</execution>
                     </systemPropertyVariables>
                 </configuration>
             </plugin>

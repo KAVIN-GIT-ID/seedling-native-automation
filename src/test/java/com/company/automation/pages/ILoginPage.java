@@ -5,6 +5,9 @@ public interface ILoginPage {
     void enterUsername(String username);
     void enterPassword(String password);
     void tapLogin();
+    void tapGoogleSignIn();
+    void tapAppleSignIn();
+    void tapXSignIn();
     boolean isErrorDisplayed();
     String getErrorText();
 }

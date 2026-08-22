@@ -62,8 +62,6 @@ public final class AndroidDriverFactory {
 
     private static AndroidDriver createCiDriver() {
         UiAutomator2Options options = new UiAutomator2Options()
-                .setDeviceName(ConfigManager.getDeviceName("android"))
-                .setPlatformVersion(ConfigManager.getPlatformVersion("android"))
                 .setAppPackage(ConfigManager.env("android.appPackage"))
                 .setAppActivity(ConfigManager.env("android.appActivity"))
                 .setAutoGrantPermissions(true)
@@ -72,6 +70,17 @@ public final class AndroidDriverFactory {
                 .setUiautomator2ServerLaunchTimeout(Duration.ofSeconds(120))
                 .setNewCommandTimeout(Duration.ofSeconds(240));
 
+        // Only set platformVersion / deviceName if explicitly overridden via -D flags
+        String explicitVersion = System.getProperty("platformVersion");
+        if (explicitVersion != null && !explicitVersion.trim().isEmpty()) {
+            options.setPlatformVersion(explicitVersion.trim());
+        }
+
+        String explicitDevice = System.getProperty("deviceName");
+        if (explicitDevice != null && !explicitDevice.trim().isEmpty()) {
+            options.setDeviceName(explicitDevice.trim());
+        }
+
         String appPath = ConfigManager.getAppPath();
         if (appPath != null && !appPath.isEmpty()) {
             options.setApp(appPath);
@@ -79,6 +88,7 @@ public final class AndroidDriverFactory {
 
         return createDriverInstance(ConfigManager.getAppiumUrl(), options);
     }
+
 
     private static AndroidDriver createBrowserStackDriver() {
         String username = ConfigManager.resolve("bstackUser", "BROWSERSTACK_USERNAME", null, null,

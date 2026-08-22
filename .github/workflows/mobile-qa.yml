@@ -57,7 +57,7 @@ jobs:
           mkdir -p apps/qa
           if ! ls apps/qa/*.apk apps/*.apk 1> /dev/null 2>&1; then
             echo "Downloading QA APK from Google Drive..."
-            python3 -m pip install --quiet gdown
+            python3 -m pip install --break-system-packages --quiet gdown || pipx install gdown
             gdown 1dDV9FrZieZXvqcirdp5Brm_pPrYzu1Mf -O apps/qa/seedling-dev.apk
           else
             echo "Found existing APK file in apps folder."

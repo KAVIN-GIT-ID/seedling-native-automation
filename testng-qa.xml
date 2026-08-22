@@ -5,6 +5,7 @@
     <test name="QA - All Tests">
         <classes>
             <class name="com.company.automation.tests.LoginTests"/>
+            <class name="com.company.automation.tests.SeedlingCreationTests"/>
         </classes>
     </test>
 </suite>

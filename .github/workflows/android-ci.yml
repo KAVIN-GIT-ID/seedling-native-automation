@@ -1,10 +1,6 @@
 name: Android Automation CI (Emulator)
 
 on:
-  push:
-    branches: [ main, master, develop ]
-  pull_request:
-    branches: [ main, master, develop ]
   workflow_dispatch:
     inputs:
       env:

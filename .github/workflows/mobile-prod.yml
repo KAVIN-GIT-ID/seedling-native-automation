@@ -23,7 +23,7 @@ on:
 jobs:
   test:
     timeout-minutes: 60
-    runs-on: macos-14
+    runs-on: ${{ github.event.inputs.platform == 'ios' && 'macos-14' || 'macos-13' }}
     permissions:
       contents: write
 
@@ -86,7 +86,7 @@ jobs:
           fi
           echo "Booting iOS Simulator UDID: $UDID"
           xcrun simctl boot $UDID || true
-          xcrun simctl bootstatus $UDID -b
+          xcrun simctl bootstatus $UDID -b || true
 
       - name: Start Appium Server in Background
         run: |
@@ -103,7 +103,7 @@ jobs:
           if [[ "$COMP" == *"all"* ]]; then
             CMD="mvn test -Denv=prod -Dplatform=$PLATFORM -Dexecution=ci -DsuiteXmlFile=testng-prod.xml"
           else
-            CMD="mvn test -Denv=prod -Dplatform=$PLATFORM -Dexecution=ci -Dtest=$COMP -DsuiteXmlFile="
+            CMD="mvn test -Denv=prod -Dplatform=$PLATFORM -Dexecution=ci -Dtest=$COMP"
           fi
 
           echo "TEST_COMMAND=$CMD" >> $GITHUB_ENV
@@ -114,14 +114,16 @@ jobs:
         if: ${{ github.event.inputs.platform == 'android' }}
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 33
-          target: google_apis
-          arch: arm64-v8a
-          profile: pixel_7
+          api-level: 31
+          target: default
+          arch: x86_64
+          profile: pixel_6
           disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             ${{ env.TEST_COMMAND }} 2>&1 | tee test-output.log
             exit ${PIPESTATUS[0]}
+
 
       - name: Run iOS Tests on Simulator
         if: ${{ github.event.inputs.platform == 'ios' }}

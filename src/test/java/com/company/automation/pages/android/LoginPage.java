@@ -93,10 +93,14 @@ public class LoginPage extends BasePage implements ILoginPage {
 
     @Override
     public void handlePermissionIfPresent() {
-        // ── Also dismiss System UI ANR dialog first ───────────────────────────
+        // ── 1. Dismiss System UI ANR dialog ──────────────────────────────────
         handleSystemUiAnrIfPresent();
 
-        // ── Then handle app permission dialogs ───────────────────────────────
+        // ── 2. Dismiss "Viewing full screen / GOT IT" immersive mode tip ─────
+        //    This overlay appears on CI emulators and completely blocks the UI.
+        handleFullscreenTipIfPresent();
+
+        // ── 3. Handle app permission dialogs ─────────────────────────────────
         try {
             driver().manage().timeouts().implicitlyWait(Duration.ofSeconds(2));
             List<WebElement> allowButtons = driver().findElements(UI_ALLOW_BUTTON);
@@ -104,6 +108,31 @@ public class LoginPage extends BasePage implements ILoginPage {
                 allowButtons.get(0).click();
                 logStep("✅ Handled system permission dialog");
                 Thread.sleep(1000);
+            }
+        } catch (Exception ignored) {
+        } finally {
+            driver().manage().timeouts().implicitlyWait(Duration.ofSeconds(0));
+        }
+    }
+
+    /**
+     * Dismisses the Android immersive mode "Viewing full screen" tip overlay.
+     * This shows as a banner with a "GOT IT" button and blocks all UI interaction.
+     * Confirmed visible in CI emulator logs/screenshots.
+     */
+    private void handleFullscreenTipIfPresent() {
+        try {
+            driver().manage().timeouts().implicitlyWait(Duration.ofSeconds(2));
+
+            // Try by text "GOT IT"
+            By gotItBtn = AppiumBy.androidUIAutomator(
+                    "new UiSelector().textContains(\"GOT IT\")");
+            List<WebElement> btns = driver().findElements(gotItBtn);
+            if (!btns.isEmpty()) {
+                btns.get(0).click();
+                logStep("✅ Dismissed 'Viewing full screen' overlay — clicked GOT IT");
+                captureDebugSnapshot("fullscreen_tip_dismissed");
+                Thread.sleep(1500);
             }
         } catch (Exception ignored) {
         } finally {

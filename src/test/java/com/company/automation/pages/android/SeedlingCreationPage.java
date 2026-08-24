@@ -23,10 +23,10 @@ import java.util.List;
 
 public class SeedlingCreationPage extends BasePage implements ISeedlingCreationPage {
 
-    // Bottom navigation center create button locators
+    // Bottom navigation center create button (3rd child of bottom tab bar container)
     private final By createTabButton = By.xpath(
-            "//*[contains(@content-desc, 'AddSeedingRoute') or contains(@content-desc, 'plus') or (contains(@content-desc, 'Create') and contains(@content-desc, 'tab')) or @content-desc='Create' or @content-desc='plus'] | " +
-            "//android.view.ViewGroup[contains(@bounds, '[432,') or contains(@bounds, '[519,') or contains(@bounds, ',21') or contains(@bounds, ',20')]"
+            "//android.widget.FrameLayout[@id='android:id/content']//android.view.ViewGroup[contains(@bounds, ',20') or contains(@bounds, ',21') or contains(@bounds, ',22')]//android.view.ViewGroup[3] | " +
+            "//android.view.ViewGroup[@content-desc='Create, tab, 3 of 5' or contains(@content-desc, 'Create, tab') or contains(@content-desc, 'AddSeedingRoute')]"
     );
 
     // "Create New Seedling" card button locators
@@ -185,7 +185,15 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
 
     @Override
     public void searchAndSelectCharity(String charitySearch, String charityLabel) {
-        tap(searchCharityField, "Search Charity Field");
+        logStep("Attempting to tap Search Charity Field...");
+        try {
+            tap(searchCharityField, "Search Charity Field");
+        } catch (Exception e) {
+            logStep("❌ searchCharityField not found! Dumping full XML page source for diagnostics:");
+            dumpPageSource("FAIL_SEARCH_CHARITY_FIELD");
+            throw e;
+        }
+
         type(searchCharityField, charitySearch, "Search Charity Field");
         dismissKeyboardAndroid();
 
@@ -342,125 +350,13 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
         }
     }
 
-    // Step 4: Giving Incentives
+    // Step 4: Giving Incentives (Skipped per user configuration — proceed directly to Step 5)
     @Override
     public void fillIncentives() {
-        logStep("Starting Step 4: Giving Incentives Configuration");
-
-        // --- Tier 1 (Symbolic) ---
-        logStep("Configuring Tier 1 Incentive");
-        tapLatestGivingIncentiveCheckbox();
-        enterLatestIncentiveDescription(SeedlingTestData.TIER1_DESCRIPTION);
-        selectIncentiveCategory("Symbolic/Incidental Acknowledgements", null);
-
-        scrollDown(0.65, 0.25);
-
-        // --- Tier 2 (Non-Professional, MID FMV = $50) ---
-        logStep("Configuring Tier 2 Incentive");
-        tapLatestGivingIncentiveCheckbox();
-        enterLatestIncentiveDescription(SeedlingTestData.TIER2_DESCRIPTION);
-        selectIncentiveCategory("Non-Professional", "50");
-
-        scrollDown(0.65, 0.25);
-
-        // --- Tier 3 (Non-Professional, MID FMV = $50) ---
-        logStep("Configuring Tier 3 Incentive");
-        tapLatestGivingIncentiveCheckbox();
-        enterLatestIncentiveDescription(SeedlingTestData.TIER3_DESCRIPTION);
-        selectIncentiveCategory("Non-Professional", "50");
-
-        scrollDown(0.65, 0.25);
-
-        // --- Tier 4 (Professional, MID FMV = $250) ---
-        logStep("Configuring Tier 4 Incentive");
-        tapLatestGivingIncentiveCheckbox();
-        enterLatestIncentiveDescription(SeedlingTestData.TIER4_DESCRIPTION);
-        selectIncentiveCategory("Professional", "250");
-
-        // --- Scroll down to reveal Special Incentives (Highest Donor & Group Incentive) ---
-        scrollDown(0.70, 0.25);
-
-        // --- Highest Donor Incentive ---
-        logStep("Configuring Highest Donor Incentive");
-        dismissKeyboardAndroid();
-        By highestDonorCheckbox = By.xpath(
-                "//android.widget.TextView[contains(@text, 'Highest Donor Incentive')]/preceding-sibling::android.view.ViewGroup | " +
-                "//android.widget.TextView[contains(@text, 'Highest Donor Incentive')] | " +
-                "//android.view.ViewGroup[@bounds='[77,1040][140,1103]' or contains(@bounds, '[77,1040]')]"
-        );
-        try {
-            tap(highestDonorCheckbox, "Highest Donor Incentive Checkbox");
-        } catch (Exception e) {
-            tapByCoordinates(108, 1071, "Highest Donor Checkbox (Coordinates)");
-        }
-
-        try { Thread.sleep(800); } catch (InterruptedException ignored) {}
-
-        enterLatestIncentiveDescription(SeedlingTestData.HIGHEST_DONOR_DESCRIPTION);
-        selectIncentiveCategory("Symbolic/Incidental Acknowledgements", null);
-
-        // --- Scroll down so Group Incentive is centered ---
-        scrollDown(0.60, 0.25);
-
-        // --- Group Incentive ---
-        logStep("Configuring Group Incentive");
-        dismissKeyboardAndroid();
-        By groupCheckbox = By.xpath(
-                "//android.widget.TextView[@text='Group Incentive']/preceding-sibling::android.view.ViewGroup | " +
-                "//android.widget.TextView[@text='Group Incentive'] | " +
-                "//android.view.ViewGroup[@bounds='[77,958][140,1021]' or contains(@bounds, '[77,958]')]"
-        );
-        try {
-            tap(groupCheckbox, "Group Incentive Checkbox");
-        } catch (Exception e) {
-            tapByCoordinates(108, 989, "Group Incentive Checkbox (Coordinates)");
-        }
-
-        try { Thread.sleep(1200); } catch (InterruptedException ignored) {}
-
-        // Target the Group Incentive EditText that follows "Group Incentive" header
-        By groupDescField = By.xpath(
-                "//android.widget.TextView[@text='Group Incentive']/following::android.widget.EditText[1] | " +
-                "//android.widget.EditText[@bounds='[185,1684][971,1946]' or contains(@bounds, '1684')]"
-        );
-        try {
-            tap(groupDescField, "Describe your Group incentive Field");
-            type(groupDescField, SeedlingTestData.GROUP_INCENTIVE_DESCRIPTION, "Describe your Group incentive Field");
-        } catch (Exception e) {
-            tapByCoordinates(578, 1815, "Describe your Group incentive Field (Coordinates)");
-            type(groupDescField, SeedlingTestData.GROUP_INCENTIVE_DESCRIPTION, "Describe your Group incentive Field");
-        }
-        dismissKeyboardAndroid();
-
-        // --- Scroll down to bring Campaign Group Incentive into view ---
-        scrollDown(0.60, 0.25);
-
-        // --- Campaign Group Incentive ---
-        logStep("Configuring Campaign Group Incentive");
-        By campaignGroupCheckbox = By.xpath(
-                "//android.widget.TextView[contains(@text, 'Campaign Group Incentive')]/preceding-sibling::* | " +
-                "//android.widget.TextView[contains(@text, 'Campaign Group Incentive')] | " +
-                "//android.view.ViewGroup[contains(@bounds, '1213') or contains(@bounds, '1249')]"
-        );
-        try {
-            tap(campaignGroupCheckbox, "Campaign Group Incentive Checkbox");
-        } catch (Exception e) {
-            tapByCoordinates(108, 1231, "Campaign Group Incentive Checkbox (Coordinates)");
-        }
-
-        try { Thread.sleep(1200); } catch (InterruptedException ignored) {}
-
-        // Target the Campaign Group Incentive EditText that follows "Campaign Group Incentive" header
-        By campaignGroupDescField = By.xpath(
-                "//android.widget.TextView[contains(@text, 'Campaign Group Incentive')]/following::android.widget.EditText[1] | " +
-                "(//android.widget.EditText[@input-type='147457'])[last()]"
-        );
-        tap(campaignGroupDescField, "Describe your Campaign Group incentive Field");
-        type(campaignGroupDescField, SeedlingTestData.CAMPAIGN_GROUP_DESCRIPTION, "Describe your Campaign Group incentive Field");
-
+        logStep("Skipping Step 4 incentive configuration — tapping Next directly");
         dismissKeyboardAndroid();
         tapNext();
-        logStep("Completed Step 4: All Incentives configured and Next tapped");
+        logStep("Completed Step 4: Next tapped directly");
     }
 
     private void tapLatestGivingIncentiveCheckbox() {

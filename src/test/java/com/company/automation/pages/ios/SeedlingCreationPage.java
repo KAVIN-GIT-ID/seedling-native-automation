@@ -10,8 +10,11 @@ import java.io.File;
 
 public class SeedlingCreationPage extends BasePage implements ISeedlingCreationPage {
 
-    // Bottom navigation center create button
-    private final By createTabButton = By.xpath("//XCUIElementTypeButton[contains(@name, 'AddSeedingRoute')] | //XCUIElementTypeButton[contains(@name, 'Create')]");
+    // Bottom navigation center create button (3rd button in bottom tab bar)
+    private final By createTabButton = By.xpath(
+            "//XCUIElementTypeTabBar/XCUIElementTypeButton[3] | " +
+            "//XCUIElementTypeButton[contains(@name, 'AddSeedingRoute') or contains(@name, 'Create') or contains(@label, 'Create')]"
+    );
 
     // "Create New Seedling" card button
     private final By createNewSeedlingButton = AppiumBy.accessibilityId("Create New Seedling");
@@ -203,105 +206,13 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
         tap(endCampaignCheckbox, "End campaign if goal is met Checkbox");
     }
 
+    // Step 4: Giving Incentives (Skipped per user configuration — proceed directly to Step 5)
     @Override
     public void fillIncentives() {
-        logStep("Starting Step 4: Giving Incentives Configuration (iOS)");
-
-        // --- Tier 1 (Symbolic) ---
-        logStep("Configuring Tier 1 Incentive");
-        tapGivingIncentiveCheckbox(1);
-        enterLatestIncentiveDescription(SeedlingTestData.TIER1_DESCRIPTION);
-        selectIncentiveCategory("Symbolic/Incidental Acknowledgements", null);
-
-        scrollDown(0.65, 0.25);
-
-        // --- Tier 2 (Non-Professional, MID FMV = $50) ---
-        logStep("Configuring Tier 2 Incentive");
-        tapGivingIncentiveCheckbox(2);
-        enterLatestIncentiveDescription(SeedlingTestData.TIER2_DESCRIPTION);
-        selectIncentiveCategory("Non-Professional", "50");
-
-        scrollDown(0.65, 0.25);
-
-        // --- Tier 3 (Non-Professional, MID FMV = $50) ---
-        logStep("Configuring Tier 3 Incentive");
-        tapGivingIncentiveCheckbox(3);
-        enterLatestIncentiveDescription(SeedlingTestData.TIER3_DESCRIPTION);
-        selectIncentiveCategory("Non-Professional", "50");
-
-        scrollDown(0.65, 0.25);
-
-        // --- Tier 4 (Professional, MID FMV = $250) ---
-        logStep("Configuring Tier 4 Incentive");
-        tapGivingIncentiveCheckbox(4);
-        enterLatestIncentiveDescription(SeedlingTestData.TIER4_DESCRIPTION);
-        selectIncentiveCategory("Professional", "250");
-
-        // --- Scroll down to reveal Special Incentives (Highest Donor & Group Incentive) ---
-        scrollDown(0.70, 0.25);
-
-        // --- Highest Donor Incentive ---
-        logStep("Configuring Highest Donor Incentive");
-        dismissKeyboardIOS();
-        By highestDonorText = AppiumBy.iOSNsPredicateString("name == 'Highest Donor Incentive' AND accessible == 1");
-        try {
-            org.openqa.selenium.WebElement textElement = getWait().waitForPresence(highestDonorText);
-            int tapX = textElement.getLocation().getX() - 20;
-            int tapY = textElement.getLocation().getY() + (textElement.getSize().getHeight() / 2);
-            tapByCoordinates(tapX, tapY, "Highest Donor Incentive Checkbox");
-        } catch (Exception e) {
-            tapByCoordinates(29, 650, "Highest Donor Checkbox (Coordinates)");
-        }
-        try { Thread.sleep(800); } catch (InterruptedException ignored) {}
-
-        enterLatestIncentiveDescription(SeedlingTestData.HIGHEST_DONOR_DESCRIPTION);
-        selectIncentiveCategory("Symbolic/Incidental Acknowledgements", null);
-
-        scrollDown(0.60, 0.25);
-
-        // --- Group Incentive ---
-        logStep("Configuring Group Incentive");
-        dismissKeyboardIOS();
-        By groupText = AppiumBy.iOSNsPredicateString("name == 'Group Incentive' AND accessible == 1");
-        try {
-            org.openqa.selenium.WebElement textElement = getWait().waitForPresence(groupText);
-            int tapX = textElement.getLocation().getX() - 20;
-            int tapY = textElement.getLocation().getY() + (textElement.getSize().getHeight() / 2);
-            tapByCoordinates(tapX, tapY, "Group Incentive Checkbox");
-        } catch (Exception e) {
-            tapByCoordinates(29, 600, "Group Incentive Checkbox (Coordinates)");
-        }
-        try { Thread.sleep(1200); } catch (InterruptedException ignored) {}
-
-        By groupDescField = AppiumBy.iOSClassChain("**/XCUIElementTypeTextView[-1]");
-        try {
-            tap(groupDescField, "Describe your Group incentive Field");
-            type(groupDescField, SeedlingTestData.GROUP_INCENTIVE_DESCRIPTION, "Describe your Group incentive Field");
-        } catch (Exception e) {
-            tapByCoordinates(180, 750, "Describe your Group incentive Field (Coordinates)");
-            type(groupDescField, SeedlingTestData.GROUP_INCENTIVE_DESCRIPTION, "Describe your Group incentive Field");
-        }
-        dismissKeyboardIOS();
-
-        scrollDown(0.60, 0.25);
-
-        // --- Campaign Group Incentive ---
-        logStep("Configuring Campaign Group Incentive");
-        By campaignGroupCheckbox = By.xpath("//XCUIElementTypeOther[contains(@name, 'Campaign Group Incentive')]");
-        try {
-            tap(campaignGroupCheckbox, "Campaign Group Incentive Checkbox");
-        } catch (Exception e) {
-            tapByCoordinates(29, 700, "Campaign Group Incentive Checkbox (Coordinates)");
-        }
-        try { Thread.sleep(1200); } catch (InterruptedException ignored) {}
-
-        By campaignGroupDescField = By.xpath("(//XCUIElementTypeTextView)[last()]");
-        tap(campaignGroupDescField, "Describe your Campaign Group incentive Field");
-        type(campaignGroupDescField, SeedlingTestData.CAMPAIGN_GROUP_DESCRIPTION, "Describe your Campaign Group incentive Field");
-
+        logStep("Skipping Step 4 incentive configuration — tapping Next directly (iOS)");
         dismissKeyboardIOS();
         tapNext();
-        logStep("Completed Step 4: All Incentives configured and Next tapped");
+        logStep("Completed Step 4: Next tapped directly");
     }
 
     private void tapGivingIncentiveCheckbox(int index) {

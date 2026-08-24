@@ -134,11 +134,7 @@ jobs:
           xcrun simctl boot $UDID || true
           xcrun simctl bootstatus $UDID -b || true
 
-      - name: Start Appium Server in Background
-        run: |
-          nohup appium --log appium.log --port 4723 > /dev/null 2>&1 &
-          sleep 5
-          curl --retry 5 --retry-delay 2 --retry-connrefused http://127.0.0.1:4723/status || echo "Appium warming up..."
+
 
       - name: Determine Test Command
         id: set-command
@@ -171,7 +167,41 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: ${{ env.TEST_COMMAND }}
+          script: |
+            # ── Step 1: Start Appium in background ─────────────────────────────────
+            nohup appium --log appium.log --port 4723 > /dev/null 2>&1 &
+            echo "Waiting 10s for Appium to be ready..."
+            sleep 10
+            curl --retry 5 --retry-delay 2 --retry-connrefused http://127.0.0.1:4723/status || echo "Appium still warming..."
+
+            # ── Step 2: Pre-launch the app via ADB to warm up React Native bundle ──
+            APK_PATH=$(find apps/qa apps -name "*.apk" 2>/dev/null | head -1)
+            echo "Installing APK: $APK_PATH"
+            adb install -r "$APK_PATH" || true
+
+            PACKAGE="com.seedling.dev"
+            ACTIVITY="com.seedling.dev.MainActivity"
+
+            echo "Launching app to warm up React Native JS bundle..."
+            adb shell am start -n "$PACKAGE/$ACTIVITY" || true
+
+            echo "Waiting 30s for React Native bundle to fully render..."
+            sleep 30
+
+            # ── Step 3: Capture diagnostic screenshot + UI XML dump ─────────────────
+            mkdir -p logs
+            adb shell screencap -p /sdcard/pre_test_screen.png || true
+            adb pull /sdcard/pre_test_screen.png logs/pre_test_screen.png || true
+            adb shell uiautomator dump /sdcard/window_dump.xml || true
+            adb pull /sdcard/window_dump.xml logs/window_dump.xml || true
+            echo "=== PRE-TEST SCREEN XML ===" && cat logs/window_dump.xml | head -200 || true
+
+            # ── Step 4: Force-stop and let Appium/driver handle fresh launch ────────
+            adb shell am force-stop "$PACKAGE" || true
+            sleep 2
+
+            # ── Step 5: Run Maven tests ─────────────────────────────────────────────
+            ${{ env.TEST_COMMAND }}
 
 
       - name: Run iOS Tests on Simulator

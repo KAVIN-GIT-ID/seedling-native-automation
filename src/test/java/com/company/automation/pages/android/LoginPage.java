@@ -2,71 +2,106 @@ package com.company.automation.pages.android;
 
 import com.company.automation.base.BasePage;
 import com.company.automation.pages.ILoginPage;
+import com.company.automation.utils.ScreenshotUtils;
 import io.appium.java_client.AppiumBy;
+import io.appium.java_client.android.AndroidDriver;
 import org.openqa.selenium.By;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebElement;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
  * Enterprise-grade Android LoginPage Page Object.
- * Built with multi-strategy element resolution, automated system permission bypass,
- * onboarding/landing screen auto-navigation, and resilient keyboard handling.
+ *
+ * Uses AppiumBy.androidUIAutomator() as the primary strategy — this calls native
+ * UiAutomator2 directly and is the ONLY selector that reliably finds elements in
+ * React Native apps regardless of view flattening or hierarchy depth.
+ *
+ * Strategy order:
+ *   1. androidUIAutomator("new UiSelector().className(...)") — native, fastest
+ *   2. AppiumBy.className(...)                               — standard fallback
+ *   3. XPath                                                 — last resort only
  */
 public class LoginPage extends BasePage implements ILoginPage {
 
-    // System Permission Dialog Locators
-    private final By permissionAllowButton = By.xpath(
-            "//android.widget.Button[@resource-id='com.android.permissioncontroller:id/permission_allow_button' " +
-            "or @resource-id='com.android.permissioncontroller:id/permission_allow_foreground_only_button' " +
-            "or @resource-id='com.android.permissioncontroller:id/permission_allow_one_time_button' " +
-            "or contains(@text, 'Allow') " +
-            "or contains(@text, 'While using') " +
-            "or contains(@text, 'ALLOW')]"
-    );
+    // ── UiAutomator2-native selectors (React Native safe) ─────────────────────
 
-    // Expanded Landing / Onboarding / Auth Navigation Buttons
-    private final By landingActionButton = By.xpath(
-            "//*[contains(@text, 'Sign In') or contains(@text, 'Sign in') or contains(@text, 'Log In') or contains(@text, 'Log in') " +
-            "or contains(@text, 'Get Started') or contains(@text, 'Get started') or contains(@text, 'Continue') " +
-            "or contains(@text, 'Already have an account') or contains(@text, 'Skip') " +
-            "or contains(@content-desc, 'Sign In') or contains(@content-desc, 'Sign in') or contains(@content-desc, 'Log In') " +
-            "or contains(@content-desc, 'Get Started') or contains(@content-desc, 'Continue')]"
-    );
+    /** Finds ALL EditText fields using native Android UiAutomator2. Works in React Native. */
+    private static final By UI_EDIT_TEXT =
+            AppiumBy.androidUIAutomator("new UiSelector().className(\"android.widget.EditText\")");
 
-    // Primary Field Locators
-    private final By editTextFields = AppiumBy.className("android.widget.EditText");
-    private final By usernameFallback = By.xpath("//android.widget.EditText[not(@password='true')]");
-    private final By passwordFallback = By.xpath("//android.widget.EditText[@password='true']");
+    /** Finds the first non-password EditText (email/username field). */
+    private static final By UI_EMAIL_FIELD =
+            AppiumBy.androidUIAutomator(
+                    "new UiSelector().className(\"android.widget.EditText\").instance(0)");
 
-    // Login Action Button Locators
-    private final By loginButton = By.xpath(
-            "//*[@content-desc='Sign In' or @text='Sign In' or @content-desc='Log In' or @text='Log In']"
-    );
-    private final By errorMessage = AppiumBy.accessibilityId("login-error-text");
+    /** Finds the second EditText (password field). */
+    private static final By UI_PASSWORD_FIELD =
+            AppiumBy.androidUIAutomator(
+                    "new UiSelector().className(\"android.widget.EditText\").instance(1)");
 
-    // Home / Feed Detection Locator (if app opens directly into main feed)
-    private final By homeScreenIndicator = By.xpath(
-            "//*[@content-desc='Create' or contains(@content-desc, 'plus') or contains(@text, 'Explore') or contains(@text, 'Home')]"
-    );
+    /** Sign-in / Log-in landing button — text-based UiAutomator selector. */
+    private static final By UI_SIGN_IN_BUTTON =
+            AppiumBy.androidUIAutomator(
+                    "new UiSelector().textContains(\"Sign In\")");
+    private static final By UI_LOG_IN_BUTTON =
+            AppiumBy.androidUIAutomator(
+                    "new UiSelector().textContains(\"Log In\")");
+    private static final By UI_GET_STARTED_BUTTON =
+            AppiumBy.androidUIAutomator(
+                    "new UiSelector().textContains(\"Get Started\")");
+    private static final By UI_ALREADY_ACCOUNT_BUTTON =
+            AppiumBy.androidUIAutomator(
+                    "new UiSelector().textContains(\"Already have\")");
+    private static final By UI_CONTINUE_BUTTON =
+            AppiumBy.androidUIAutomator(
+                    "new UiSelector().textContains(\"Continue\")");
+
+    /** Allow permission button — UiAutomator2 native. */
+    private static final By UI_ALLOW_BUTTON =
+            AppiumBy.androidUIAutomator(
+                    "new UiSelector().textContains(\"Allow\")");
+
+    /** Home / feed screen indicators. */
+    private static final By UI_HOME_INDICATOR =
+            AppiumBy.androidUIAutomator(
+                    "new UiSelector().textContains(\"Explore\").instance(0)");
+
+    // ── XPath fallbacks (used only if UiAutomator fails) ─────────────────────
+
+    private static final By XPATH_EMAIL =
+            By.xpath("//android.widget.EditText[not(@password='true')]");
+    private static final By XPATH_PASSWORD =
+            By.xpath("//android.widget.EditText[@password='true']");
+    private static final By XPATH_LOGIN_BTN =
+            By.xpath("//*[@content-desc='Sign In' or @text='Sign In' " +
+                    "or @content-desc='Log In' or @text='Log In' " +
+                    "or @text='Login' or @content-desc='Login']");
+
+    private static final By ERROR_MESSAGE = AppiumBy.accessibilityId("login-error-text");
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     @Override
     public void handlePermissionIfPresent() {
         try {
             driver().manage().timeouts().implicitlyWait(Duration.ofSeconds(2));
-            List<WebElement> allowButtons = driver().findElements(permissionAllowButton);
+            List<WebElement> allowButtons = driver().findElements(UI_ALLOW_BUTTON);
             if (!allowButtons.isEmpty()) {
-                for (WebElement btn : allowButtons) {
-                    if (btn.isDisplayed()) {
-                        btn.click();
-                        logStep("✅ Handled system permission popup");
-                        break;
-                    }
-                }
+                allowButtons.get(0).click();
+                logStep("✅ Handled system permission dialog");
+                Thread.sleep(1000);
             }
         } catch (Exception ignored) {
-            // Permission dialog not present, continue smoothly
         } finally {
             driver().manage().timeouts().implicitlyWait(Duration.ofSeconds(0));
         }
@@ -76,131 +111,252 @@ public class LoginPage extends BasePage implements ILoginPage {
     public void enterUsername(String username) {
         logStep("Resolving login screen elements...");
 
+        // ── Diagnostic: capture the very first screen the test sees ───────────
+        captureDebugSnapshot("01_app_startup");
+
+        // Log current activity
         try {
-            if (driver() instanceof io.appium.java_client.android.AndroidDriver) {
-                logStep("Active Android Activity: " + ((io.appium.java_client.android.AndroidDriver) driver()).currentActivity());
+            if (driver() instanceof AndroidDriver) {
+                logStep("Active Android Activity: " +
+                        ((AndroidDriver) driver()).currentActivity());
             }
         } catch (Exception ignored) {}
 
-        // Active State Machine: Poll for up to 45s for Splash -> Permissions -> Landing Screen -> Login Inputs
-        long startTime = System.currentTimeMillis();
-        long timeoutMs = 45000;
+        // ── Phase 1: App restart state machine ────────────────────────────────
+        boolean inputsFound = waitForLoginScreenReady(60_000);
 
-        while (System.currentTimeMillis() - startTime < timeoutMs) {
-            handlePermissionIfPresent();
+        if (!inputsFound) {
+            // Final diagnostic: page source + screenshot when completely stuck
+            captureDebugSnapshot("FAILED_no_login_inputs");
+            dumpPageSource("FAILURE — no EditText found after all restarts");
+        }
 
-            // 1. Check if EditText inputs are already present on screen
-            List<WebElement> inputs = driver().findElements(editTextFields);
-            if (!inputs.isEmpty() && inputs.get(0).isDisplayed()) {
-                logStep("✅ Detected active Login Form inputs");
-                break;
-            }
-
-            // 2. Check if already on the Home / Feed Screen (logged in / guest mode)
-            List<WebElement> homeElements = driver().findElements(homeScreenIndicator);
-            if (!homeElements.isEmpty() && homeElements.get(0).isDisplayed()) {
-                logStep("✅ Already on Home / Main Screen, proceeding to test flow");
+        // ── Phase 2: Enter username via UiAutomator2 native selector ──────────
+        try {
+            List<WebElement> editTexts = driver().findElements(UI_EDIT_TEXT);
+            if (!editTexts.isEmpty()) {
+                WebElement emailField = editTexts.get(0);
+                emailField.click();
+                emailField.clear();
+                emailField.sendKeys(username);
+                logStep("✅ Entered username via UiAutomator2 (instance 0)");
                 return;
             }
+        } catch (Exception e) {
+            logStep("UiAutomator2 EditText search failed: " + e.getMessage());
+        }
 
-            // 3. Check if a Landing Screen / Welcome Button is displayed
-            List<WebElement> landingBtns = driver().findElements(landingActionButton);
-            if (!landingBtns.isEmpty()) {
-                for (WebElement btn : landingBtns) {
-                    try {
-                        if (btn.isDisplayed()) {
-                            btn.click();
-                            logStep("✅ Tapped on Landing/Welcome Screen button to open Login form");
-                            Thread.sleep(2000);
-                            break;
-                        }
-                    } catch (Exception ignored) {}
+        // ── Phase 3: XPath fallback ────────────────────────────────────────────
+        logStep("Falling back to XPath for email field");
+        type(XPATH_EMAIL, username, "Email / Username Field");
+    }
+
+    /**
+     * Core state machine — waits for the login screen to be ready.
+     * Handles: splash screen, onboarding, permission dialogs, home screen.
+     *
+     * Implements the restart strategy:
+     *   - Poll for up to 10s per attempt
+     *   - If nothing interactive found → restart the app (up to 3 restarts)
+     *   - Total maximum wait: 3 restarts × ~15s each = ~45s
+     *
+     * @param timeoutMs ignored (kept for signature compatibility); restart strategy controls timing
+     * @return true if EditText inputs were found
+     */
+    private boolean waitForLoginScreenReady(long timeoutMs) {
+        final int MAX_RESTARTS = 3;
+        final long POLL_WINDOW_MS = 10_000;
+        final String APP_PACKAGE = "com.seedling.dev";
+
+        for (int attempt = 0; attempt <= MAX_RESTARTS; attempt++) {
+            if (attempt > 0) {
+                logStep("🔄 App restart attempt " + attempt + " of " + MAX_RESTARTS
+                        + " — no interactive elements found, restarting...");
+                try {
+                    if (driver() instanceof AndroidDriver) {
+                        ((AndroidDriver) driver()).terminateApp(APP_PACKAGE);
+                        sleep(2000);
+                        ((AndroidDriver) driver()).activateApp(APP_PACKAGE);
+                        logStep("✅ App restarted — waiting 10s for React Native bundle...");
+                    }
+                    sleep(10_000);
+                    // Screenshot right after restart so we see exactly what loaded
+                    captureDebugSnapshot("restart_" + attempt + "_after_boot");
+                } catch (Exception e) {
+                    logStep("App restart failed (attempt " + attempt + "): " + e.getMessage());
                 }
             }
 
+            long pollStart = System.currentTimeMillis();
+            while (System.currentTimeMillis() - pollStart < POLL_WINDOW_MS) {
+
+                handlePermissionIfPresent();
+
+                try {
+                    List<WebElement> inputs = driver().findElements(UI_EDIT_TEXT);
+                    if (!inputs.isEmpty()) {
+                        logStep("✅ Login form ready — found " + inputs.size()
+                                + " EditText field(s) on attempt " + attempt);
+                        captureDebugSnapshot("login_form_ready_attempt_" + attempt);
+                        return true;
+                    }
+                } catch (Exception ignored) {}
+
+                try {
+                    List<WebElement> homeEls = driver().findElements(UI_HOME_INDICATOR);
+                    if (!homeEls.isEmpty()) {
+                        logStep("✅ Already on Home/Feed screen (attempt " + attempt + ")");
+                        captureDebugSnapshot("home_screen_detected_attempt_" + attempt);
+                        return true;
+                    }
+                } catch (Exception ignored) {}
+
+                if (tryTapButton(UI_SIGN_IN_BUTTON, "Sign In (landing)")) break;
+                if (tryTapButton(UI_LOG_IN_BUTTON, "Log In (landing)")) break;
+                if (tryTapButton(UI_ALREADY_ACCOUNT_BUTTON, "Already have an account")) break;
+                if (tryTapButton(UI_GET_STARTED_BUTTON, "Get Started")) break;
+                if (tryTapButton(UI_CONTINUE_BUTTON, "Continue")) break;
+
+                sleep(1000);
+            }
+
+            // Re-check after poll window ends
             try {
-                Thread.sleep(1000);
-            } catch (InterruptedException ignored) {}
+                List<WebElement> inputs = driver().findElements(UI_EDIT_TEXT);
+                if (!inputs.isEmpty()) {
+                    logStep("✅ Login form found after poll window (attempt " + attempt + ")");
+                    captureDebugSnapshot("login_form_found_attempt_" + attempt);
+                    return true;
+                }
+            } catch (Exception ignored) {}
+
+            // Screenshot at end of each failed attempt so we can see the stuck screen
+            captureDebugSnapshot("attempt_" + attempt + "_no_elements_found");
         }
 
-        hideKeyboard();
+        logStep("❌ Login form not found after " + MAX_RESTARTS + " restarts");
+        return false;
+    }
 
-        // 4. Locate and enter username into the first input field
-        List<WebElement> inputs = driver().findElements(editTextFields);
-        if (!inputs.isEmpty()) {
-            WebElement emailInput = inputs.get(0);
-            emailInput.click();
-            emailInput.clear();
-            emailInput.sendKeys(username);
-            logStep("✅ Entered username into Email field");
-        } else {
-            type(usernameFallback, username, "Email / Username Field");
+    /**
+     * Attempts to click a button if it exists. Returns true if clicked (caller should re-poll).
+     */
+    private boolean tryTapButton(By locator, String label) {
+        try {
+            List<WebElement> btns = driver().findElements(locator);
+            if (!btns.isEmpty()) {
+                btns.get(0).click();
+                logStep("✅ Tapped '" + label + "' button on landing screen");
+                sleep(2500);
+                // Screenshot after tapping so we see what screen opened
+                captureDebugSnapshot("after_tap_" + label.replaceAll("\\s+", "_").toLowerCase());
+                return true;
+            }
+        } catch (Exception ignored) {}
+        return false;
+    }
+
+    private void sleep(long ms) {
+        try { Thread.sleep(ms); } catch (InterruptedException ignored) {}
+    }
+
+    /**
+     * Saves a PNG screenshot to logs/<name>_<timestamp>.png.
+     * The logs/ directory is uploaded as a GitHub Actions artifact so every
+     * screenshot is downloadable directly from the CI run.
+     */
+    private void captureDebugSnapshot(String name) {
+        try {
+            Path dir = Path.of("logs");
+            Files.createDirectories(dir);
+            String ts = DateTimeFormatter.ofPattern("HHmmss_SSS")
+                    .format(LocalDateTime.now());
+            Path target = dir.resolve(name + "_" + ts + ".png");
+            File src = ((TakesScreenshot) driver()).getScreenshotAs(OutputType.FILE);
+            Files.copy(src.toPath(), target,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            logStep("📸 Screenshot saved: " + target);
+            // Also attach to ExtentReport for the HTML report
+            takeScreenshot(name);
+        } catch (Exception e) {
+            logStep("⚠️ Screenshot capture failed for '" + name + "': " + e.getMessage());
         }
     }
 
-
+    // ─────────────────────────────────────────────────────────────────────────
 
     @Override
     public void enterPassword(String password) {
-        // Locate and enter password into the second input field (or password-specific field)
-        List<WebElement> inputs = driver().findElements(editTextFields);
-        if (inputs.size() > 1) {
-            WebElement pwdInput = inputs.get(1);
-            pwdInput.click();
-            pwdInput.clear();
-            pwdInput.sendKeys(password);
-            logStep("Entered password into Password field via Native ClassName");
-        } else {
-            type(passwordFallback, password, "Password Field");
+        try {
+            List<WebElement> editTexts = driver().findElements(UI_EDIT_TEXT);
+            if (editTexts.size() > 1) {
+                WebElement pwdField = editTexts.get(1);
+                pwdField.click();
+                pwdField.clear();
+                pwdField.sendKeys(password);
+                logStep("✅ Entered password via UiAutomator2 (instance 1)");
+                hideKeyboard();
+                return;
+            }
+        } catch (Exception e) {
+            logStep("UiAutomator2 password field search failed: " + e.getMessage());
         }
+
+        // Fallback to XPath
+        type(XPATH_PASSWORD, password, "Password Field");
         hideKeyboard();
     }
 
     @Override
     public void tapLogin() {
         hideKeyboard();
+
+        // Try UiAutomator2 first — most reliable in React Native
+        if (tryTapButton(UI_SIGN_IN_BUTTON, "Sign In Button")) return;
+        if (tryTapButton(UI_LOG_IN_BUTTON, "Log In Button")) return;
+
+        // XPath fallback
         try {
-            List<WebElement> btns = driver().findElements(loginButton);
+            List<WebElement> btns = driver().findElements(XPATH_LOGIN_BTN);
             if (!btns.isEmpty()) {
-                // Click the last visible matching Sign In button (the primary action button on form)
                 btns.get(btns.size() - 1).click();
-                logStep("Tapped on Sign In Button");
+                logStep("✅ Tapped Sign In button via XPath fallback");
                 return;
             }
         } catch (Exception ignored) {}
 
-        tap(loginButton, "Sign In Button");
+        tap(XPATH_LOGIN_BTN, "Sign In Button");
     }
 
     @Override
     public void tapGoogleSignIn() {
         logStep("Google Sign-In on Android");
-        By googleBtn = AppiumBy.xpath("//*[contains(@content-desc, 'Google') or contains(@text, 'Google')]");
-        tap(googleBtn, "Sign In with Google (Android)");
+        By btn = AppiumBy.androidUIAutomator("new UiSelector().textContains(\"Google\")");
+        tap(btn, "Sign In with Google");
     }
 
     @Override
     public void tapAppleSignIn() {
         logStep("Apple Sign-In on Android (Web OAuth)");
-        By appleBtn = AppiumBy.xpath("//*[contains(@content-desc, 'Apple') or contains(@text, 'Apple')]");
-        tap(appleBtn, "Sign In with Apple (Android)");
+        By btn = AppiumBy.androidUIAutomator("new UiSelector().textContains(\"Apple\")");
+        tap(btn, "Sign In with Apple");
     }
 
     @Override
     public void tapXSignIn() {
         logStep("X (Twitter) Sign-In on Android");
-        By xBtn = AppiumBy.xpath("//*[contains(@content-desc, 'Twitter') or contains(@content-desc, 'X') or contains(@text, 'Twitter')]");
-        tap(xBtn, "Sign In with X (Android)");
+        By btn = AppiumBy.androidUIAutomator(
+                "new UiSelector().textContains(\"Twitter\").instance(0)");
+        tap(btn, "Sign In with X");
     }
 
     @Override
     public boolean isErrorDisplayed() {
-        return isDisplayed(errorMessage);
+        return isDisplayed(ERROR_MESSAGE);
     }
 
     @Override
     public String getErrorText() {
-        return getText(errorMessage, "Error Message");
+        return getText(ERROR_MESSAGE, "Error Message");
     }
 }
-

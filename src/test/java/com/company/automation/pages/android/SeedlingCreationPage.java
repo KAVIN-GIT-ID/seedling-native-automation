@@ -718,12 +718,20 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
     }
 
     private void tapByCoordinates(int x, int y, String elementName) {
-        PointerInput finger = new PointerInput(PointerInput.Kind.TOUCH, "finger");
-        Sequence tap = new Sequence(finger, 1);
-        tap.addAction(finger.createPointerMove(Duration.ZERO, PointerInput.Origin.viewport(), x, y));
-        tap.addAction(finger.createPointerDown(PointerInput.MouseButton.LEFT.asArg()));
-        tap.addAction(finger.createPointerUp(PointerInput.MouseButton.LEFT.asArg()));
-        driver().perform(Collections.singletonList(tap));
+        try {
+            java.util.Map<String, Object> params = new java.util.HashMap<>();
+            params.put("x", x);
+            params.put("y", y);
+            driver().executeScript("mobile: clickGesture", params);
+        } catch (Exception e) {
+            PointerInput finger = new PointerInput(PointerInput.Kind.TOUCH, "finger");
+            Sequence tap = new Sequence(finger, 1);
+            tap.addAction(finger.createPointerMove(Duration.ZERO, PointerInput.Origin.viewport(), x, y));
+            tap.addAction(finger.createPointerDown(PointerInput.MouseButton.LEFT.asArg()));
+            tap.addAction(finger.createPointerMove(Duration.ofMillis(150), PointerInput.Origin.viewport(), x, y));
+            tap.addAction(finger.createPointerUp(PointerInput.MouseButton.LEFT.asArg()));
+            driver().perform(Collections.singletonList(tap));
+        }
         logStep("Tapped on " + elementName + " at (" + x + ", " + y + ")");
     }
 }

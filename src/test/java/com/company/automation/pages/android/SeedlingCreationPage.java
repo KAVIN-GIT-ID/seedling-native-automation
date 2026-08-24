@@ -25,8 +25,8 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
 
     // Bottom navigation center create button locators
     private final By createTabButton = By.xpath(
-            "//android.view.ViewGroup[contains(@bounds, '[432,2244]') or contains(@bounds, '[519,2294]') or @content-desc='Create' or contains(@content-desc, 'plus')] | " +
-            "//*[@content-desc='Create' or @text='Create' or contains(@content-desc, 'Create')]"
+            "//android.view.ViewGroup[contains(@bounds, '[432,2244]') or contains(@bounds, '[519,2294]') or contains(@bounds, ',21') or contains(@bounds, ',22') or contains(@bounds, ',20')] | " +
+            "//*[@content-desc='AddSeedingRoute' or @content-desc='Create' or contains(@content-desc, 'plus')]"
     );
 
     // "Create New Seedling" card button locators
@@ -39,7 +39,9 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
     );
 
     // Search charity input field
-    private final By searchCharityField = By.xpath("//android.widget.EditText");
+    private final By searchCharityField = By.xpath(
+            "//android.widget.EditText | //*[contains(@hint, 'Search') or contains(@text, 'Search') or contains(@content-desc, 'Search')]"
+    );
 
     // Next step button
     private final By nextButton = By.xpath("//*[@content-desc='Next' or @text='Next']");
@@ -90,16 +92,31 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
         captureDebugSnapshot("02_home_screen_before_tap_create_tab");
 
         boolean tapped = false;
+
+        // 1. Try bottom navigation specific locators (AddSeedingRoute or plus)
         try {
-            By uiAutomatorCreate = AppiumBy.androidUIAutomator(
-                    "new UiSelector().descriptionContains(\"Create\")");
-            List<WebElement> els = driver().findElements(uiAutomatorCreate);
+            By uiAutomatorAddRoute = AppiumBy.androidUIAutomator(
+                    "new UiSelector().descriptionContains(\"AddSeedingRoute\")");
+            List<WebElement> els = driver().findElements(uiAutomatorAddRoute);
             if (!els.isEmpty()) {
                 els.get(0).click();
-                logStep("✅ Tapped Bottom Create Tab Button via UiAutomator description");
+                logStep("✅ Tapped Bottom Create Tab Button via AddSeedingRoute");
                 tapped = true;
             }
         } catch (Exception ignored) {}
+
+        if (!tapped) {
+            try {
+                By uiAutomatorPlus = AppiumBy.androidUIAutomator(
+                        "new UiSelector().descriptionContains(\"plus\")");
+                List<WebElement> els = driver().findElements(uiAutomatorPlus);
+                if (!els.isEmpty()) {
+                    els.get(0).click();
+                    logStep("✅ Tapped Bottom Create Tab Button via plus description");
+                    tapped = true;
+                }
+            } catch (Exception ignored) {}
+        }
 
         if (!tapped) {
             try {
@@ -111,8 +128,8 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
                 int screenWidth = driver().manage().window().getSize().getWidth();
                 int screenHeight = driver().manage().window().getSize().getHeight();
                 int x = screenWidth / 2;
-                int y = (int) (screenHeight * 0.965);
-                tapByCoordinates(x, y, "Bottom Create Tab Button");
+                int y = (int) (screenHeight * 0.956); // ~2180 on 2280 height
+                tapByCoordinates(x, y, "Bottom Create Tab Button (Center Coordinates)");
             }
         }
 

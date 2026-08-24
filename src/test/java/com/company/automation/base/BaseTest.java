@@ -48,19 +48,12 @@ public abstract class BaseTest {
             DriverManager.setDriver(AndroidDriverFactory.create());
         }
 
-        String bundleId = platform.equals("ios") ? ConfigManager.env("ios.bundleId") : ConfigManager.env("android.appPackage");
+        // Small pause to allow the app UI and JS bundle to finish loading
         try {
-            io.appium.java_client.AppiumDriver driver = DriverManager.getDriver();
-            if (driver instanceof io.appium.java_client.InteractsWithApps) {
-                log.info("Forcefully terminating and restarting app for a clean session on {}...", platform);
-                io.appium.java_client.InteractsWithApps appsDriver = (io.appium.java_client.InteractsWithApps) driver;
-                appsDriver.terminateApp(bundleId);
-                appsDriver.activateApp(bundleId);
-            }
-        } catch (Exception e) {
-            log.warn("Could not forcefully restart app on {}: {}", platform, e.getMessage());
-        }
+            Thread.sleep(3000);
+        } catch (InterruptedException ignored) {}
     }
+
 
     /**
      * Common reusable login flow for Registered User scenarios (Seedling creation, donations, profile, etc.).

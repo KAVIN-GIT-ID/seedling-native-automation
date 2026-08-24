@@ -54,8 +54,23 @@ public class LoginPage extends BasePage implements ILoginPage {
     @Override
     public void enterUsername(String username) {
         handlePermissionIfPresent();
+
+        // If app opened on a landing / welcome screen, tap the initial Sign In / Get Started button
+        try {
+            if (driver().findElements(usernameField).isEmpty()) {
+                By landingBtn = By.xpath("//*[@content-desc='Sign In' or @text='Sign In' or @content-desc='Log In' or @text='Log In' or @content-desc='Get Started' or @text='Get Started']");
+                List<WebElement> btns = driver().findElements(landingBtn);
+                if (!btns.isEmpty() && btns.get(0).isDisplayed()) {
+                    btns.get(0).click();
+                    logStep("Tapped on Landing Screen button to navigate to Login form");
+                    Thread.sleep(2000);
+                }
+            }
+        } catch (Exception ignored) {}
+
         type(usernameField, username, "Email / Username Field");
     }
+
 
     @Override
     public void enterPassword(String password) {

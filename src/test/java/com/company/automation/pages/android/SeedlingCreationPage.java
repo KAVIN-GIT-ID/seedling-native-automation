@@ -6,24 +6,37 @@ import com.company.automation.pages.ISeedlingCreationPage;
 import io.appium.java_client.AppiumBy;
 import io.appium.java_client.android.AndroidDriver;
 import org.openqa.selenium.By;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.PointerInput;
 import org.openqa.selenium.interactions.Sequence;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 
 public class SeedlingCreationPage extends BasePage implements ISeedlingCreationPage {
 
-    // Bottom navigation center create button
+    // Bottom navigation center create button locators
     private final By createTabButton = By.xpath(
-            "//android.view.ViewGroup[contains(@bounds, '[432,2244]') or contains(@bounds, '[519,2294]') or @content-desc='Create' or contains(@content-desc, 'plus')]"
+            "//android.view.ViewGroup[contains(@bounds, '[432,2244]') or contains(@bounds, '[519,2294]') or @content-desc='Create' or contains(@content-desc, 'plus')] | " +
+            "//*[@content-desc='Create' or @text='Create' or contains(@content-desc, 'Create')]"
     );
 
-    // "Create New Seedling" card button
+    // "Create New Seedling" card button locators
     private final By createNewSeedlingButton = AppiumBy.accessibilityId("Create New Seedling");
+    private final By createNewSeedlingUiAutomator = AppiumBy.androidUIAutomator(
+            "new UiSelector().textContains(\"Create New Seedling\")"
+    );
+    private final By createNewSeedlingFallback = By.xpath(
+            "//*[contains(@content-desc, 'Create New Seedling') or contains(@text, 'Create New Seedling') or contains(@text, 'Seedling')]"
+    );
 
     // Search charity input field
     private final By searchCharityField = By.xpath("//android.widget.EditText");
@@ -49,25 +62,96 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
     );
 
 
+    /**
+     * Saves a PNG screenshot to logs/<name>_<timestamp>.png for CI diagnostics.
+     */
+    private void captureDebugSnapshot(String name) {
+        try {
+            Path dir = Path.of("logs");
+            Files.createDirectories(dir);
+            String ts = DateTimeFormatter.ofPattern("HHmmss_SSS")
+                    .format(LocalDateTime.now());
+            Path target = dir.resolve(name + "_" + ts + ".png");
+            File src = ((TakesScreenshot) driver()).getScreenshotAs(OutputType.FILE);
+            Files.copy(src.toPath(), target,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            logStep("📸 Screenshot saved: " + target);
+            takeScreenshot(name);
+        } catch (Exception e) {
+            logStep("⚠️ Screenshot capture failed for '" + name + "': " + e.getMessage());
+        }
+    }
+
     @Override
     public void tapCreateTab() {
-        // Wait up to 15 seconds for the home screen to load after login
-        try { Thread.sleep(10000); } catch (InterruptedException ignored) {}
+        logStep("Waiting for home screen to stabilize after login...");
+        try { Thread.sleep(5000); } catch (InterruptedException ignored) {}
+
+        captureDebugSnapshot("02_home_screen_before_tap_create_tab");
 
         try {
             tap(createTabButton, "Bottom Create Tab Button");
-            return;
-        } catch (Exception ignored) {}
+            logStep("Tapped Bottom Create Tab Button via locator");
+        } catch (Exception e) {
+            logStep("Locator tap failed for Create Tab, using coordinate fallback...");
+            int screenWidth = driver().manage().window().getSize().getWidth();
+            int screenHeight = driver().manage().window().getSize().getHeight();
+            int x = screenWidth / 2;
+            int y = (int) (screenHeight * 0.965);
+            tapByCoordinates(x, y, "Bottom Create Tab Button");
+        }
 
-        int screenWidth = driver().manage().window().getSize().getWidth();
-        int screenHeight = driver().manage().window().getSize().getHeight();
-        int x = screenWidth / 2;
-        int y = (int) (screenHeight * 0.965);
-        tapByCoordinates(x, y, "Bottom Create Tab Button");
+        try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+        captureDebugSnapshot("03_screen_after_tap_create_tab");
+        dumpPageSource("AFTER_TAP_CREATE_TAB");
     }
 
     @Override
     public void tapCreateNewSeedling() {
+        logStep("Attempting to locate and tap 'Create New Seedling' button...");
+
+        long start = System.currentTimeMillis();
+        while (System.currentTimeMillis() - start < 20000) {
+            // 1. Try accessibilityId
+            try {
+                List<WebElement> els = driver().findElements(createNewSeedlingButton);
+                if (!els.isEmpty()) {
+                    els.get(0).click();
+                    logStep("✅ Tapped 'Create New Seedling' via accessibilityId");
+                    captureDebugSnapshot("04_tapped_create_new_seedling");
+                    return;
+                }
+            } catch (Exception ignored) {}
+
+            // 2. Try UiAutomator
+            try {
+                List<WebElement> els = driver().findElements(createNewSeedlingUiAutomator);
+                if (!els.isEmpty()) {
+                    els.get(0).click();
+                    logStep("✅ Tapped 'Create New Seedling' via UiAutomator text");
+                    captureDebugSnapshot("04_tapped_create_new_seedling");
+                    return;
+                }
+            } catch (Exception ignored) {}
+
+            // 3. Try Fallback XPath
+            try {
+                List<WebElement> els = driver().findElements(createNewSeedlingFallback);
+                if (!els.isEmpty()) {
+                    els.get(0).click();
+                    logStep("✅ Tapped 'Create New Seedling' via Fallback XPath");
+                    captureDebugSnapshot("04_tapped_create_new_seedling");
+                    return;
+                }
+            } catch (Exception ignored) {}
+
+            try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
+        }
+
+        // If not found after 20 seconds:
+        captureDebugSnapshot("FAILED_create_new_seedling_not_found");
+        dumpPageSource("FAILURE — Create New Seedling button not found");
+        logStep("❌ Failed to find 'Create New Seedling' button. Attempting standard tap as final try...");
         tap(createNewSeedlingButton, "Create New Seedling Button");
     }
 

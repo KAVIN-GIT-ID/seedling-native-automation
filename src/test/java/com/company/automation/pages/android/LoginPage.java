@@ -182,9 +182,6 @@ public class LoginPage extends BasePage implements ILoginPage {
     public void enterUsername(String username) {
         logStep("Resolving login screen elements...");
 
-        // ── Diagnostic: capture the very first screen the test sees ───────────
-        captureDebugSnapshot("01_app_startup");
-
         // Log current activity
         try {
             if (driver() instanceof AndroidDriver) {

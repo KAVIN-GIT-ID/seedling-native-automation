@@ -86,27 +86,48 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
 
     @Override
     public void tapCreateTab() {
-        logStep("Waiting for home screen to stabilize after login...");
+        logStep("Waiting for Home Screen to stabilize after login...");
         try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
         ensureAppInForeground();
 
+        logStep("Tapping Bottom Navigation Create Tab (+)...");
+        int screenWidth = driver().manage().window().getSize().getWidth();
+        int screenHeight = driver().manage().window().getSize().getHeight();
+
+        // Center tab bar coordinate: y = 0.90 (approx 2052px on 2280px screen, avoiding 0.94 OS bar)
+        int tabX = screenWidth / 2;
+        int tabY = (int) (screenHeight * 0.90);
+
         try {
-            By bottomPlusExact = By.xpath("//*[contains(@content-desc, 'AddSeedingRoute') or contains(@content-desc, 'plus') or (contains(@content-desc, 'Create') and contains(@content-desc, 'tab')) or @content-desc='Create' or @content-desc='plus']");
-            List<WebElement> els = driver().findElements(bottomPlusExact);
+            By tabLocator = By.xpath(
+                    "//*[contains(@content-desc, 'AddSeeding') or contains(@content-desc, 'AddSeedling') or contains(@content-desc, 'plus') or (contains(@content-desc, 'Create') and contains(@content-desc, 'tab'))] | " +
+                    "//android.view.ViewGroup[contains(@bounds, ',20') or contains(@bounds, ',208') or contains(@bounds, ',210')]"
+            );
+            List<WebElement> els = driver().findElements(tabLocator);
             if (!els.isEmpty()) {
                 els.get(0).click();
-                logStep("✅ Tapped Bottom Create Tab Button via content-desc tab match");
+                logStep("✅ Tapped Bottom Create Tab via locator");
             } else {
-                tap(createTabButton, "Bottom Create Tab Button");
+                tapByCoordinates(tabX, tabY, "Bottom Create Tab (Coordinates Y=0.90)");
             }
         } catch (Exception e) {
-            logStep("Locator tap failed for Create Tab, using center tab coordinates...");
-            int screenWidth = driver().manage().window().getSize().getWidth();
-            int screenHeight = driver().manage().window().getSize().getHeight();
-            tapByCoordinates(screenWidth / 2, (int) (screenHeight * 0.94), "Bottom Create Tab Button");
+            tapByCoordinates(tabX, tabY, "Bottom Create Tab (Coordinates Y=0.90)");
         }
 
         try { Thread.sleep(2500); } catch (InterruptedException ignored) {}
+
+        // Verify if screen transitioned to AddSeedlingStep0 or AddCharity
+        try {
+            List<WebElement> searchFields = driver().findElements(searchCharityField);
+            List<WebElement> createBtns = driver().findElements(By.xpath("//*[@text='Create New Seedling' or contains(@text, 'Create New Seedling')]"));
+            if (searchFields.isEmpty() && createBtns.isEmpty()) {
+                logStep("⚠️ Navigation screen transition not detected, retrying center tab tap at Y=0.90...");
+                tapByCoordinates(tabX, tabY, "Bottom Create Tab Retry (Coordinates Y=0.90)");
+                try { Thread.sleep(2500); } catch (InterruptedException ignored) {}
+            } else {
+                logStep("✅ Create flow screen transition confirmed!");
+            }
+        } catch (Exception ignored) {}
     }
 
     private void ensureAppInForeground() {

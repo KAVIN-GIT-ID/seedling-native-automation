@@ -25,8 +25,8 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
 
     // Bottom navigation center create button locators
     private final By createTabButton = By.xpath(
-            "//android.view.ViewGroup[contains(@bounds, '[432,2244]') or contains(@bounds, '[519,2294]') or contains(@bounds, ',21') or contains(@bounds, ',22') or contains(@bounds, ',20')] | " +
-            "//*[@content-desc='AddSeedingRoute' or @content-desc='Create' or contains(@content-desc, 'plus')]"
+            "//*[@content-desc='AddSeedingRoute' or @content-desc='plus' or @content-desc='Create'] | " +
+            "//android.view.ViewGroup[contains(@bounds, '[432,2244]') or contains(@bounds, '[519,2294]') or contains(@bounds, '[432,20') or contains(@bounds, '[519,20')]"
     );
 
     // "Create New Seedling" card button locators
@@ -91,15 +91,22 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
         ensureAppInForeground();
 
         try {
-            tap(createTabButton, "Bottom Create Tab Button");
+            By bottomPlusExact = By.xpath("//*[@content-desc='AddSeedingRoute' or @content-desc='plus' or @content-desc='Create']");
+            List<WebElement> els = driver().findElements(bottomPlusExact);
+            if (!els.isEmpty()) {
+                els.get(0).click();
+                logStep("✅ Tapped Bottom Create Tab Button via exact content-desc");
+            } else {
+                tap(createTabButton, "Bottom Create Tab Button");
+            }
         } catch (Exception e) {
             logStep("Locator tap failed for Create Tab, using center tab coordinates...");
             int screenWidth = driver().manage().window().getSize().getWidth();
             int screenHeight = driver().manage().window().getSize().getHeight();
-            tapByCoordinates(screenWidth / 2, (int) (screenHeight * 0.90), "Bottom Create Tab Button");
+            tapByCoordinates(screenWidth / 2, (int) (screenHeight * 0.903), "Bottom Create Tab Button");
         }
 
-        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+        try { Thread.sleep(2500); } catch (InterruptedException ignored) {}
     }
 
     private void ensureAppInForeground() {
@@ -127,7 +134,14 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
             try {
                 tap(createNewSeedlingUiAutomator, "Create New Seedling (UiAutomator)");
             } catch (Exception e2) {
-                tap(createNewSeedlingFallback, "Create New Seedling (Fallback)");
+                try {
+                    tap(createNewSeedlingFallback, "Create New Seedling (Fallback)");
+                } catch (Exception e3) {
+                    logStep("Locator tap failed for Create New Seedling card, tapping center card coordinates...");
+                    int screenWidth = driver().manage().window().getSize().getWidth();
+                    int screenHeight = driver().manage().window().getSize().getHeight();
+                    tapByCoordinates(screenWidth / 2, (int) (screenHeight * 0.64), "Create New Seedling Card");
+                }
             }
         }
         try { Thread.sleep(2000); } catch (InterruptedException ignored) {}

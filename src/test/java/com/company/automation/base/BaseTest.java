@@ -11,6 +11,7 @@ import com.company.automation.pages.LoginPageFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
+import java.util.List;
 import org.testng.ITestContext;
 import org.testng.ITestResult;
 import org.testng.annotations.AfterMethod;
@@ -76,9 +77,23 @@ public abstract class BaseTest {
         loginPage.enterPassword(ConfigManager.credential("qa.password"));
         loginPage.tapLogin();
 
-        try {
-            Thread.sleep(5000);
-        } catch (InterruptedException ignored) {}
+        log.info("Waiting for API authentication & Home screen transition...");
+        long start = System.currentTimeMillis();
+        while (System.currentTimeMillis() - start < 20000) {
+            try {
+                // Check if password field is gone (indicating login form cleared)
+                List<org.openqa.selenium.WebElement> pwdFields = DriverManager.getDriver()
+                        .findElements(org.openqa.selenium.By.xpath("//android.widget.EditText[@password='true']"));
+                if (pwdFields.isEmpty()) {
+                    log.info("✅ Login screen cleared — transition to Home screen detected");
+                    break;
+                }
+            } catch (Exception ignored) {}
+            try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
+        }
+
+        // Give React Native Home Screen bundle time to render
+        try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
 
         Assert.assertFalse(loginPage.isErrorDisplayed(), "Login failed for registered user flow");
         log.info("Registered user logged in successfully");

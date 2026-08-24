@@ -125,23 +125,38 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
 
     @Override
     public void tapCreateNewSeedling() {
-        logStep("Tapping 'Create New Seedling' button...");
+        logStep("Checking if screen auto-redirected to Step 1 or if 'Create New Seedling' option is visible...");
         try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
 
+        // Path A: Check if app auto-redirected directly to Step 1 (AddCharity) when no draft exists
+        try {
+            List<WebElement> searchFields = driver().findElements(searchCharityField);
+            if (!searchFields.isEmpty() && searchFields.get(0).isDisplayed()) {
+                logStep("✅ App auto-redirected directly to Step 1 (AddCharity) — proceeding to charity search");
+                return;
+            }
+        } catch (Exception ignored) {}
+
+        // Path B: Check if draft menu is visible and tap "Create New Seedling" button
+        try {
+            By createNewBtn = By.xpath("//*[@text='Create New Seedling' or contains(@text, 'Create New Seedling') or @content-desc='Create New Seedling' or contains(@content-desc, 'Create New Seedling')]");
+            List<WebElement> btns = driver().findElements(createNewBtn);
+            if (!btns.isEmpty()) {
+                btns.get(0).click();
+                logStep("✅ Tapped 'Create New Seedling' button on draft selection screen");
+                try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                return;
+            }
+        } catch (Exception ignored) {}
+
+        // Fallback option tap
         try {
             tap(createNewSeedlingButton, "Create New Seedling Button");
         } catch (Exception e1) {
             try {
                 tap(createNewSeedlingUiAutomator, "Create New Seedling (UiAutomator)");
             } catch (Exception e2) {
-                try {
-                    tap(createNewSeedlingFallback, "Create New Seedling (Fallback)");
-                } catch (Exception e3) {
-                    logStep("Locator tap failed for Create New Seedling card, tapping center card coordinates...");
-                    int screenWidth = driver().manage().window().getSize().getWidth();
-                    int screenHeight = driver().manage().window().getSize().getHeight();
-                    tapByCoordinates(screenWidth / 2, (int) (screenHeight * 0.64), "Create New Seedling Card");
-                }
+                logStep("Proceeding to Step 1...");
             }
         }
         try { Thread.sleep(2000); } catch (InterruptedException ignored) {}

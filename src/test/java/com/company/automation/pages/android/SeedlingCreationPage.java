@@ -87,112 +87,50 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
     @Override
     public void tapCreateTab() {
         logStep("Waiting for home screen to stabilize after login...");
-        try { Thread.sleep(5000); } catch (InterruptedException ignored) {}
+        try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+        ensureAppInForeground();
 
-        captureDebugSnapshot("02_home_screen_before_tap_create_tab");
-
-        boolean tapped = false;
-
-        // 1. Try bottom navigation specific locators (AddSeedingRoute or plus)
         try {
-            By uiAutomatorAddRoute = AppiumBy.androidUIAutomator(
-                    "new UiSelector().descriptionContains(\"AddSeedingRoute\")");
-            List<WebElement> els = driver().findElements(uiAutomatorAddRoute);
-            if (!els.isEmpty()) {
-                els.get(0).click();
-                logStep("✅ Tapped Bottom Create Tab Button via AddSeedingRoute");
-                tapped = true;
+            tap(createTabButton, "Bottom Create Tab Button");
+        } catch (Exception e) {
+            logStep("Locator tap failed for Create Tab, using center tab coordinates...");
+            int screenWidth = driver().manage().window().getSize().getWidth();
+            int screenHeight = driver().manage().window().getSize().getHeight();
+            tapByCoordinates(screenWidth / 2, (int) (screenHeight * 0.90), "Bottom Create Tab Button");
+        }
+
+        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+    }
+
+    private void ensureAppInForeground() {
+        try {
+            if (driver() instanceof AndroidDriver) {
+                AndroidDriver androidDriver = (AndroidDriver) driver();
+                String activity = androidDriver.currentActivity();
+                if (activity != null && (activity.contains("launcher") || activity.contains("Launcher"))) {
+                    logStep("⚠️ App was minimized — reactivating com.seedling.dev...");
+                    androidDriver.activateApp("com.seedling.dev");
+                    try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+                }
             }
         } catch (Exception ignored) {}
-
-        if (!tapped) {
-            try {
-                By uiAutomatorPlus = AppiumBy.androidUIAutomator(
-                        "new UiSelector().descriptionContains(\"plus\")");
-                List<WebElement> els = driver().findElements(uiAutomatorPlus);
-                if (!els.isEmpty()) {
-                    els.get(0).click();
-                    logStep("✅ Tapped Bottom Create Tab Button via plus description");
-                    tapped = true;
-                }
-            } catch (Exception ignored) {}
-        }
-
-        if (!tapped) {
-            try {
-                tap(createTabButton, "Bottom Create Tab Button");
-                logStep("Tapped Bottom Create Tab Button via locator");
-                tapped = true;
-            } catch (Exception e) {
-                logStep("Locator tap failed for Create Tab, using coordinate fallback...");
-                int screenWidth = driver().manage().window().getSize().getWidth();
-                int screenHeight = driver().manage().window().getSize().getHeight();
-                int x = screenWidth / 2;
-                int y = (int) (screenHeight * 0.956); // ~2180 on 2280 height
-                tapByCoordinates(x, y, "Bottom Create Tab Button (Center Coordinates)");
-            }
-        }
-
-        try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
-        captureDebugSnapshot("03_screen_after_tap_create_tab");
-        dumpPageSource("AFTER_TAP_CREATE_TAB");
     }
 
     @Override
     public void tapCreateNewSeedling() {
-        logStep("Attempting to locate and tap 'Create New Seedling' button...");
+        logStep("Tapping 'Create New Seedling' button...");
+        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
 
-        long start = System.currentTimeMillis();
-        while (System.currentTimeMillis() - start < 20000) {
-            // 1. Try accessibilityId
-            try {
-                List<WebElement> els = driver().findElements(createNewSeedlingButton);
-                if (!els.isEmpty()) {
-                    els.get(0).click();
-                    logStep("✅ Tapped 'Create New Seedling' via accessibilityId");
-                    captureDebugSnapshot("04_tapped_create_new_seedling");
-                    return;
-                }
-            } catch (Exception ignored) {}
-
-            // 2. Try UiAutomator
-            try {
-                List<WebElement> els = driver().findElements(createNewSeedlingUiAutomator);
-                if (!els.isEmpty()) {
-                    els.get(0).click();
-                    logStep("✅ Tapped 'Create New Seedling' via UiAutomator text");
-                    captureDebugSnapshot("04_tapped_create_new_seedling");
-                    return;
-                }
-            } catch (Exception ignored) {}
-
-            // 3. Try Fallback XPath
-            try {
-                List<WebElement> els = driver().findElements(createNewSeedlingFallback);
-                if (!els.isEmpty()) {
-                    els.get(0).click();
-                    logStep("✅ Tapped 'Create New Seedling' via Fallback XPath");
-                    captureDebugSnapshot("04_tapped_create_new_seedling");
-                    return;
-                }
-            } catch (Exception ignored) {}
-
-            try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
-        }
-
-        // If not found after 20 seconds, attempt coordinate tap fallback first
         try {
-            logStep("Attempting coordinate tap fallback for 'Create New Seedling' card at (540, 600)...");
-            tapByCoordinates(540, 600, "Create New Seedling Card (Coordinates)");
-            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
-            captureDebugSnapshot("04_tapped_create_new_seedling_coordinates");
-            return;
-        } catch (Exception ignored) {}
-
-        captureDebugSnapshot("FAILED_create_new_seedling_not_found");
-        dumpPageSource("FAILURE — Create New Seedling button not found");
-        logStep("❌ Failed to find 'Create New Seedling' button. Attempting standard tap as final try...");
-        tap(createNewSeedlingButton, "Create New Seedling Button");
+            tap(createNewSeedlingButton, "Create New Seedling Button");
+        } catch (Exception e1) {
+            try {
+                tap(createNewSeedlingUiAutomator, "Create New Seedling (UiAutomator)");
+            } catch (Exception e2) {
+                tap(createNewSeedlingFallback, "Create New Seedling (Fallback)");
+            }
+        }
+        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
     }
 
     @Override

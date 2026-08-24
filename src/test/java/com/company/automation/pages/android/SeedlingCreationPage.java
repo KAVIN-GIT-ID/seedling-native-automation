@@ -487,55 +487,88 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
         logStep("Starting Step 6: Video / Media Screen");
         dismissKeyboardAndroid();
 
-        // 1. Push Test Video to Device Storage using Appium
+        // 1. Push Test Video to Device Storage using Appium (DCIM and Movies)
         try {
             if (driver() instanceof AndroidDriver) {
                 File videoFile = new File("src/test/resources/Untitled video (1).mp4");
                 if (videoFile.exists()) {
+                    ((AndroidDriver) driver()).pushFile("/sdcard/DCIM/Camera/SeedlingTestVideo.mp4", videoFile);
                     ((AndroidDriver) driver()).pushFile("/sdcard/Movies/SeedlingTestVideo.mp4", videoFile);
+                    logStep("✅ Pushed test video file to Android storage");
                 }
+            }
+        } catch (Exception e) {
+            logStep("Note: Video push skipped/failed: " + e.getMessage());
+        }
+
+        // 2. Click "Record or Choose A File"
+        try {
+            By uploadBtn = By.xpath("//*[contains(@content-desc, 'Choose A File') or contains(@text, 'Choose A File') or contains(@content-desc, 'Record') or contains(@text, 'Record')]");
+            tap(uploadBtn, "Record or Choose A File Button");
+        } catch (Exception e) {
+            tapByCoordinates(540, 1000, "Record or Choose A File Button (Fallback)");
+        }
+
+        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+
+        // 3. Click "CHOOSE FROM LIBRARY" popup button if shown
+        try {
+            By chooseFromLibraryBtn = By.xpath("//*[@text='CHOOSE FROM LIBRARY' or @resource-id='android:id/button2' or contains(@text, 'LIBRARY') or contains(@content-desc, 'LIBRARY')]");
+            List<WebElement> libBtns = driver().findElements(chooseFromLibraryBtn);
+            if (!libBtns.isEmpty() && libBtns.get(0).isDisplayed()) {
+                libBtns.get(0).click();
+                logStep("✅ Tapped CHOOSE FROM LIBRARY button");
+                Thread.sleep(3000);
             }
         } catch (Exception ignored) {}
 
-        // 2. Click "Record or Choose A File"
-        By uploadBtn = By.xpath("//*[contains(@content-desc, 'Choose A File') or contains(@text, 'Choose A File')]");
-        tap(uploadBtn, "Record or Choose A File Button");
-
-        try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
-
-        // 3. Click "CHOOSE FROM LIBRARY" popup button
-        By chooseFromLibraryBtn = By.xpath("//*[@text='CHOOSE FROM LIBRARY' or @resource-id='android:id/button2']");
-        tap(chooseFromLibraryBtn, "CHOOSE FROM LIBRARY Button");
-
-        try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
-
-        // 4. Select the first media file from gallery
+        // 4. Select the first media thumbnail from gallery / photo picker
         logStep("Selecting the first video from the gallery...");
-        By firstGridItem = By.xpath("//*[@bounds='[0,1133][358,1491]']");
+        By firstGridItem = By.xpath(
+                "//android.widget.ImageView[contains(@resource-id, 'icon') or contains(@resource-id, 'thumbnail') or contains(@content-desc, 'Video') or contains(@content-desc, 'Photo')] | " +
+                "//android.view.ViewGroup[contains(@resource-id, 'item')][1] | " +
+                "(//android.widget.ImageView)[1]"
+        );
         try {
-            tap(firstGridItem, "First Video Thumbnail");
+            List<WebElement> items = driver().findElements(firstGridItem);
+            if (!items.isEmpty()) {
+                items.get(0).click();
+                logStep("✅ Selected first media thumbnail from gallery");
+            } else {
+                tapByCoordinates(180, 1312, "First Video Thumbnail (Coordinates)");
+            }
         } catch (Exception e) {
-            tapByCoordinates(180, 1312, "First Video Thumbnail");
+            tapByCoordinates(180, 1312, "First Video Thumbnail (Coordinates)");
         }
 
-        try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
+        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
 
-        // 5. Click 'Done' button to close gallery
-        logStep("Tapping 'Done' to confirm selection...");
-        By doneBtnLocator = By.xpath("//android.widget.Button[@bounds='[796,2149][1012,2254]']");
+        // 5. Click 'Done' / 'Select' / 'Open' button to confirm media selection
+        logStep("Tapping 'Done' / 'Select' to confirm selection...");
+        By doneBtnLocator = By.xpath(
+                "//*[@text='Done' or @text='DONE' or @text='Select' or @text='SELECT' or @text='Open' or @text='OPEN' " +
+                "or @content-desc='Done' or contains(@resource-id, 'button_done') or contains(@resource-id, 'action_done')]"
+        );
         try {
-            tap(doneBtnLocator, "Done Button");
+            List<WebElement> doneBtns = driver().findElements(doneBtnLocator);
+            if (!doneBtns.isEmpty() && doneBtns.get(0).isDisplayed()) {
+                doneBtns.get(0).click();
+                logStep("✅ Tapped Done button in gallery picker");
+            } else {
+                tapByCoordinates(904, 2201, "Done Button (Coordinates)");
+            }
         } catch (Exception e) {
-            tapByCoordinates(904, 2201, "Done Button");
+            tapByCoordinates(904, 2201, "Done Button (Coordinates)");
         }
 
         // Wait for video upload / transcoding back in the Seedling app
-        logStep("Waiting 15s for video upload/processing to complete inside the app...");
-        try { Thread.sleep(15000); } catch (InterruptedException ignored) {}
+        logStep("Waiting for video upload/processing to complete inside the app...");
+        try { Thread.sleep(12000); } catch (InterruptedException ignored) {}
 
         // 6. Tap Next
         tapNext();
     }
+
 
     // Step 7: Review & Submit (Exact match to TypeScript submitSeedling)
     @Override

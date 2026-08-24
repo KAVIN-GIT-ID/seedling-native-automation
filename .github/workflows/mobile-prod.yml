@@ -154,12 +154,13 @@ jobs:
           PROD_PASSWORD: ${{ secrets.PROD_PASSWORD }}
         with:
           api-level: 31
-          target: default
+          target: google_apis
           arch: x86_64
           profile: pixel_6
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: ${{ env.TEST_COMMAND }}
+
 
       - name: Run iOS Tests on Simulator
         if: ${{ github.event.inputs.platform == 'ios' }}

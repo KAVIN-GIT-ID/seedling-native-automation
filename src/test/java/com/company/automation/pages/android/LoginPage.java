@@ -26,10 +26,13 @@ public class LoginPage extends BasePage implements ILoginPage {
             "or contains(@text, 'ALLOW')]"
     );
 
-    // Landing / Onboarding Screen Action Button
+    // Expanded Landing / Onboarding / Auth Navigation Buttons
     private final By landingActionButton = By.xpath(
-            "//*[@content-desc='Sign In' or @text='Sign In' or @content-desc='Log In' or @text='Log In' " +
-            "or @content-desc='Get Started' or @text='Get Started' or @content-desc='Continue' or @text='Continue']"
+            "//*[contains(@text, 'Sign In') or contains(@text, 'Sign in') or contains(@text, 'Log In') or contains(@text, 'Log in') " +
+            "or contains(@text, 'Get Started') or contains(@text, 'Get started') or contains(@text, 'Continue') " +
+            "or contains(@text, 'Already have an account') or contains(@text, 'Skip') " +
+            "or contains(@content-desc, 'Sign In') or contains(@content-desc, 'Sign in') or contains(@content-desc, 'Log In') " +
+            "or contains(@content-desc, 'Get Started') or contains(@content-desc, 'Continue')]"
     );
 
     // Primary Field Locators
@@ -42,6 +45,11 @@ public class LoginPage extends BasePage implements ILoginPage {
             "//*[@content-desc='Sign In' or @text='Sign In' or @content-desc='Log In' or @text='Log In']"
     );
     private final By errorMessage = AppiumBy.accessibilityId("login-error-text");
+
+    // Home / Feed Detection Locator (if app opens directly into main feed)
+    private final By homeScreenIndicator = By.xpath(
+            "//*[@content-desc='Create' or contains(@content-desc, 'plus') or contains(@text, 'Explore') or contains(@text, 'Home')]"
+    );
 
     @Override
     public void handlePermissionIfPresent() {
@@ -68,6 +76,12 @@ public class LoginPage extends BasePage implements ILoginPage {
     public void enterUsername(String username) {
         logStep("Resolving login screen elements...");
 
+        try {
+            if (driver() instanceof io.appium.java_client.android.AndroidDriver) {
+                logStep("Active Android Activity: " + ((io.appium.java_client.android.AndroidDriver) driver()).currentActivity());
+            }
+        } catch (Exception ignored) {}
+
         // Active State Machine: Poll for up to 45s for Splash -> Permissions -> Landing Screen -> Login Inputs
         long startTime = System.currentTimeMillis();
         long timeoutMs = 45000;
@@ -82,7 +96,14 @@ public class LoginPage extends BasePage implements ILoginPage {
                 break;
             }
 
-            // 2. Check if a Landing Screen / Welcome Button is displayed
+            // 2. Check if already on the Home / Feed Screen (logged in / guest mode)
+            List<WebElement> homeElements = driver().findElements(homeScreenIndicator);
+            if (!homeElements.isEmpty() && homeElements.get(0).isDisplayed()) {
+                logStep("✅ Already on Home / Main Screen, proceeding to test flow");
+                return;
+            }
+
+            // 3. Check if a Landing Screen / Welcome Button is displayed
             List<WebElement> landingBtns = driver().findElements(landingActionButton);
             if (!landingBtns.isEmpty()) {
                 for (WebElement btn : landingBtns) {
@@ -104,7 +125,7 @@ public class LoginPage extends BasePage implements ILoginPage {
 
         hideKeyboard();
 
-        // 3. Locate and enter username into the first input field
+        // 4. Locate and enter username into the first input field
         List<WebElement> inputs = driver().findElements(editTextFields);
         if (!inputs.isEmpty()) {
             WebElement emailInput = inputs.get(0);
@@ -116,6 +137,7 @@ public class LoginPage extends BasePage implements ILoginPage {
             type(usernameFallback, username, "Email / Username Field");
         }
     }
+
 
 
     @Override

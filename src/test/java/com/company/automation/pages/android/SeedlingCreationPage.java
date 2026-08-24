@@ -182,6 +182,7 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
     public void searchAndSelectCharity(String charitySearch, String charityLabel) {
         tap(searchCharityField, "Search Charity Field");
         type(searchCharityField, charitySearch, "Search Charity Field");
+        dismissKeyboardAndroid();
 
         try {
             Thread.sleep(2500);
@@ -191,7 +192,11 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
         try {
             tap(charityResultLocator, "Charity Search Result: " + charityLabel);
         } catch (Exception e) {
-            By fallbackLocator = By.xpath("//android.view.ViewGroup[contains(@content-desc, '" + charitySearch + "')]");
+            By fallbackLocator = By.xpath(
+                    "//android.view.ViewGroup[contains(@content-desc, '" + charitySearch + "')] | " +
+                    "//android.widget.TextView[contains(@text, '" + charitySearch + "')] | " +
+                    "//*[contains(@content-desc, '" + charitySearch + "') or contains(@text, '" + charitySearch + "')]"
+            );
             tap(fallbackLocator, "Charity Search Result (Fallback): " + charitySearch);
         }
 
@@ -214,6 +219,7 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
     public void searchAndSelectCoSponsor(String coSponsorSearch, String coSponsorName) {
         tap(coSponsorSearchField, "Co-Sponsor Search Field");
         type(coSponsorSearchField, coSponsorSearch, "Co-Sponsor Search Field");
+        dismissKeyboardAndroid();
 
         try {
             Thread.sleep(2500);

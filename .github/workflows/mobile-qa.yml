@@ -161,20 +161,40 @@ jobs:
           PROD_USERNAME: ${{ secrets.PROD_USERNAME }}
           PROD_PASSWORD: ${{ secrets.PROD_PASSWORD }}
         with:
-          api-level: 31
-          target: google_apis
+          api-level: 29
+          target: default
           arch: x86_64
-          profile: pixel_6
+          profile: pixel_4
           disable-animations: true
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
           script: |
             # ── Step 1: Start Appium in background ─────────────────────────────────
             nohup appium --log appium.log --port 4723 > /dev/null 2>&1 &
-            echo "Waiting 10s for Appium to be ready..."
-            sleep 10
+            echo "Waiting 15s for Appium to be ready..."
+            sleep 15
             curl --retry 5 --retry-delay 2 --retry-connrefused http://127.0.0.1:4723/status || echo "Appium still warming..."
 
-            # ── Step 2: Pre-launch the app via ADB to warm up React Native bundle ──
+            # ── Step 2: Wait for emulator System UI to fully stabilize ────────────
+            echo "Waiting for device to be fully ready..."
+            adb wait-for-device
+            adb shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done'
+            echo "Device boot completed. Waiting 15s more for System UI to settle..."
+            sleep 15
+
+            # ── Step 3: Dismiss ANY System UI ANR / crash dialogs via ADB ────────
+            dismiss_anr() {
+              echo "Checking for ANR dialogs..."
+              # Click 'Wait' button (aerr_wait) if present
+              adb shell input keyevent 4 || true  # back key
+              sleep 1
+              # Also try clicking aerr_wait button by resource-id via am
+              adb shell "am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS" || true
+              sleep 1
+            }
+            dismiss_anr
+            dismiss_anr
+
+            # ── Step 4: Pre-install APK ───────────────────────────────────────────
             APK_PATH=$(find apps/qa apps -name "*.apk" 2>/dev/null | head -1)
             echo "Installing APK: $APK_PATH"
             adb install -r "$APK_PATH" || true
@@ -182,26 +202,31 @@ jobs:
             PACKAGE="com.seedling.dev"
             ACTIVITY="com.seedling.dev.MainActivity"
 
+            # ── Step 5: Launch app and wait for RN bundle to render ───────────────
             echo "Launching app to warm up React Native JS bundle..."
             adb shell am start -n "$PACKAGE/$ACTIVITY" || true
-
             echo "Waiting 30s for React Native bundle to fully render..."
             sleep 30
 
-            # ── Step 3: Capture diagnostic screenshot + UI XML dump ─────────────────
+            # ── Step 6: Dismiss any ANR that appeared during app startup ──────────
+            dismiss_anr
+
+            # ── Step 7: Capture pre-test diagnostic screenshot + XML dump ─────────
             mkdir -p logs
             adb shell screencap -p /sdcard/pre_test_screen.png || true
             adb pull /sdcard/pre_test_screen.png logs/pre_test_screen.png || true
             adb shell uiautomator dump /sdcard/window_dump.xml || true
             adb pull /sdcard/window_dump.xml logs/window_dump.xml || true
-            echo "=== PRE-TEST SCREEN XML ===" && cat logs/window_dump.xml | head -200 || true
+            echo "=== PRE-TEST SCREEN XML ==="
+            cat logs/window_dump.xml | head -100 || true
 
-            # ── Step 4: Force-stop and let Appium/driver handle fresh launch ────────
+            # ── Step 8: Force-stop app — let Appium session do fresh launch ───────
             adb shell am force-stop "$PACKAGE" || true
             sleep 2
 
-            # ── Step 5: Run Maven tests ─────────────────────────────────────────────
+            # ── Step 9: Run Maven tests ───────────────────────────────────────────
             ${{ env.TEST_COMMAND }}
+
 
 
       - name: Run iOS Tests on Simulator

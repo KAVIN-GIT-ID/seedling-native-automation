@@ -93,6 +93,10 @@ public class LoginPage extends BasePage implements ILoginPage {
 
     @Override
     public void handlePermissionIfPresent() {
+        // ── Also dismiss System UI ANR dialog first ───────────────────────────
+        handleSystemUiAnrIfPresent();
+
+        // ── Then handle app permission dialogs ───────────────────────────────
         try {
             driver().manage().timeouts().implicitlyWait(Duration.ofSeconds(2));
             List<WebElement> allowButtons = driver().findElements(UI_ALLOW_BUTTON);
@@ -106,6 +110,44 @@ public class LoginPage extends BasePage implements ILoginPage {
             driver().manage().timeouts().implicitlyWait(Duration.ofSeconds(0));
         }
     }
+
+    /**
+     * Detects and dismisses the "System UI isn't responding" ANR dialog.
+     * This dialog (resource-id: android:id/aerr_wait) appears on the GitHub Actions
+     * emulator when the software renderer overloads the System UI process.
+     * We always click "Wait" to keep the emulator alive.
+     */
+    private void handleSystemUiAnrIfPresent() {
+        try {
+            driver().manage().timeouts().implicitlyWait(Duration.ofSeconds(2));
+
+            // Primary: click the "Wait" button on the ANR dialog
+            By anrWaitBtn = By.id("android:id/aerr_wait");
+            List<WebElement> waitBtns = driver().findElements(anrWaitBtn);
+            if (!waitBtns.isEmpty()) {
+                waitBtns.get(0).click();
+                logStep("⚠️ Dismissed 'System UI isn't responding' ANR — clicked Wait");
+                captureDebugSnapshot("anr_dismissed");
+                Thread.sleep(3000);
+                return;
+            }
+
+            // Fallback: UiAutomator text match
+            By anrWaitUi = AppiumBy.androidUIAutomator(
+                    "new UiSelector().resourceId(\"android:id/aerr_wait\")");
+            List<WebElement> waitUiBtns = driver().findElements(anrWaitUi);
+            if (!waitUiBtns.isEmpty()) {
+                waitUiBtns.get(0).click();
+                logStep("⚠️ Dismissed System UI ANR via UiAutomator — clicked Wait");
+                captureDebugSnapshot("anr_dismissed_uiautomator");
+                Thread.sleep(3000);
+            }
+        } catch (Exception ignored) {
+        } finally {
+            driver().manage().timeouts().implicitlyWait(Duration.ofSeconds(0));
+        }
+    }
+
 
     @Override
     public void enterUsername(String username) {

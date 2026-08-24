@@ -89,16 +89,31 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
 
         captureDebugSnapshot("02_home_screen_before_tap_create_tab");
 
+        boolean tapped = false;
         try {
-            tap(createTabButton, "Bottom Create Tab Button");
-            logStep("Tapped Bottom Create Tab Button via locator");
-        } catch (Exception e) {
-            logStep("Locator tap failed for Create Tab, using coordinate fallback...");
-            int screenWidth = driver().manage().window().getSize().getWidth();
-            int screenHeight = driver().manage().window().getSize().getHeight();
-            int x = screenWidth / 2;
-            int y = (int) (screenHeight * 0.965);
-            tapByCoordinates(x, y, "Bottom Create Tab Button");
+            By uiAutomatorCreate = AppiumBy.androidUIAutomator(
+                    "new UiSelector().descriptionContains(\"Create\")");
+            List<WebElement> els = driver().findElements(uiAutomatorCreate);
+            if (!els.isEmpty()) {
+                els.get(0).click();
+                logStep("✅ Tapped Bottom Create Tab Button via UiAutomator description");
+                tapped = true;
+            }
+        } catch (Exception ignored) {}
+
+        if (!tapped) {
+            try {
+                tap(createTabButton, "Bottom Create Tab Button");
+                logStep("Tapped Bottom Create Tab Button via locator");
+                tapped = true;
+            } catch (Exception e) {
+                logStep("Locator tap failed for Create Tab, using coordinate fallback...");
+                int screenWidth = driver().manage().window().getSize().getWidth();
+                int screenHeight = driver().manage().window().getSize().getHeight();
+                int x = screenWidth / 2;
+                int y = (int) (screenHeight * 0.965);
+                tapByCoordinates(x, y, "Bottom Create Tab Button");
+            }
         }
 
         try { Thread.sleep(3000); } catch (InterruptedException ignored) {}

@@ -10,6 +10,9 @@ import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebElement;
 
+import org.openqa.selenium.interactions.PointerInput;
+import org.openqa.selenium.interactions.Sequence;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,6 +20,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -308,13 +312,27 @@ public class LoginPage extends BasePage implements ILoginPage {
 
     /**
      * Attempts to click a button if it exists. Returns true if clicked (caller should re-poll).
+     * Prefers elements marked clickable="true", or falls back to the last element in document order.
      */
     private boolean tryTapButton(By locator, String label) {
         try {
             List<WebElement> btns = driver().findElements(locator);
             if (!btns.isEmpty()) {
-                btns.get(0).click();
-                logStep("✅ Tapped '" + label + "' button on landing screen");
+                WebElement target = null;
+                for (WebElement btn : btns) {
+                    try {
+                        String isClickable = btn.getAttribute("clickable");
+                        if ("true".equalsIgnoreCase(isClickable)) {
+                            target = btn;
+                            break;
+                        }
+                    } catch (Exception ignored) {}
+                }
+                if (target == null) {
+                    target = btns.get(btns.size() - 1);
+                }
+                target.click();
+                logStep("✅ Tapped '" + label + "' button");
                 sleep(2500);
                 // Screenshot after tapping so we see what screen opened
                 captureDebugSnapshot("after_tap_" + label.replaceAll("\\s+", "_").toLowerCase());
@@ -322,6 +340,16 @@ public class LoginPage extends BasePage implements ILoginPage {
             }
         } catch (Exception ignored) {}
         return false;
+    }
+
+    private void tapByCoordinates(int x, int y, String elementName) {
+        PointerInput finger = new PointerInput(PointerInput.Kind.TOUCH, "finger");
+        Sequence tap = new Sequence(finger, 1);
+        tap.addAction(finger.createPointerMove(Duration.ZERO, PointerInput.Origin.viewport(), x, y));
+        tap.addAction(finger.createPointerDown(PointerInput.MouseButton.LEFT.asArg()));
+        tap.addAction(finger.createPointerUp(PointerInput.MouseButton.LEFT.asArg()));
+        driver().perform(Collections.singletonList(tap));
+        logStep("Tapped on " + elementName + " at (" + x + ", " + y + ")");
     }
 
     private void sleep(long ms) {
@@ -379,21 +407,47 @@ public class LoginPage extends BasePage implements ILoginPage {
     public void tapLogin() {
         hideKeyboard();
 
-        // Try UiAutomator2 first — most reliable in React Native
+        // 1. Try UiAutomator2 selectors specifically targeting clickable submit button
+        By clickableSignInDesc = AppiumBy.androidUIAutomator(
+                "new UiSelector().clickable(true).descriptionContains(\"Sign In\")");
+        By clickableSignInText = AppiumBy.androidUIAutomator(
+                "new UiSelector().clickable(true).textContains(\"Sign In\")");
+        By descSignIn = AppiumBy.androidUIAutomator(
+                "new UiSelector().description(\"Sign In\")");
+
+        if (tryTapButton(clickableSignInDesc, "Sign In Submit Button (clickable desc)")) return;
+        if (tryTapButton(clickableSignInText, "Sign In Submit Button (clickable text)")) return;
+        if (tryTapButton(descSignIn, "Sign In Submit Button (desc)")) return;
         if (tryTapButton(UI_SIGN_IN_BUTTON, "Sign In Button")) return;
         if (tryTapButton(UI_LOG_IN_BUTTON, "Log In Button")) return;
 
-        // XPath fallback
+        // 2. XPath fallback targeting clickable element
         try {
             List<WebElement> btns = driver().findElements(XPATH_LOGIN_BTN);
             if (!btns.isEmpty()) {
-                btns.get(btns.size() - 1).click();
+                WebElement target = null;
+                for (WebElement b : btns) {
+                    if ("true".equalsIgnoreCase(b.getAttribute("clickable"))) {
+                        target = b;
+                        break;
+                    }
+                }
+                if (target == null) {
+                    target = btns.get(btns.size() - 1);
+                }
+                target.click();
                 logStep("✅ Tapped Sign In button via XPath fallback");
+                sleep(2500);
+                captureDebugSnapshot("after_tap_sign_in_xpath");
                 return;
             }
         } catch (Exception ignored) {}
 
-        tap(XPATH_LOGIN_BTN, "Sign In Button");
+        // 3. Fallback: Coordinate tap for Sign In submit button at center of bounds [124,1302][956,1449] -> (540, 1375)
+        logStep("Attempting coordinate tap fallback for Sign In submit button at (540, 1375)...");
+        tapByCoordinates(540, 1375, "Sign In Submit Button");
+        sleep(2500);
+        captureDebugSnapshot("after_tap_sign_in_coordinates");
     }
 
     @Override

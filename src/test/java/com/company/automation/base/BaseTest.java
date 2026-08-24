@@ -67,7 +67,7 @@ public abstract class BaseTest {
         loginPage.tapLogin();
 
         try {
-            Thread.sleep(2000);
+            Thread.sleep(5000);
         } catch (InterruptedException ignored) {}
 
         Assert.assertFalse(loginPage.isErrorDisplayed(), "Login failed for registered user flow");

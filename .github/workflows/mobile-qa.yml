@@ -168,33 +168,27 @@ jobs:
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
           script: |
-            # ── Step 1: Start Appium in background ─────────────────────────────────
+            # ── Step 1: Start Appium in background ────────────────────────────
             nohup appium --log appium.log --port 4723 > /dev/null 2>&1 &
             echo "Waiting 15s for Appium to be ready..."
             sleep 15
             curl --retry 5 --retry-delay 2 --retry-connrefused http://127.0.0.1:4723/status || echo "Appium still warming..."
 
-            # ── Step 2: Wait for emulator System UI to fully stabilize ────────────
+            # ── Step 2: Wait for emulator to be 100% ready ────────────────────
             echo "Waiting for device to be fully ready..."
             adb wait-for-device
             adb shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done'
             echo "Device boot completed. Waiting 15s more for System UI to settle..."
             sleep 15
 
-            # ── Step 3: Dismiss ANY System UI ANR / crash dialogs via ADB ────────
-            dismiss_anr() {
-              echo "Checking for ANR dialogs..."
-              # Click 'Wait' button (aerr_wait) if present
-              adb shell input keyevent 4 || true  # back key
-              sleep 1
-              # Also try clicking aerr_wait button by resource-id via am
-              adb shell "am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS" || true
-              sleep 1
-            }
-            dismiss_anr
-            dismiss_anr
+            # ── Step 3: Dismiss System UI ANR dialogs (inline, no functions) ──
+            echo "Dismissing any ANR/crash dialogs before app install..."
+            adb shell input keyevent 4 || true
+            sleep 1
+            adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS || true
+            sleep 2
 
-            # ── Step 4: Pre-install APK ───────────────────────────────────────────
+            # ── Step 4: Pre-install APK ───────────────────────────────────────
             APK_PATH=$(find apps/qa apps -name "*.apk" 2>/dev/null | head -1)
             echo "Installing APK: $APK_PATH"
             adb install -r "$APK_PATH" || true
@@ -202,16 +196,20 @@ jobs:
             PACKAGE="com.seedling.dev"
             ACTIVITY="com.seedling.dev.MainActivity"
 
-            # ── Step 5: Launch app and wait for RN bundle to render ───────────────
+            # ── Step 5: Launch app — warm up React Native JS bundle ───────────
             echo "Launching app to warm up React Native JS bundle..."
             adb shell am start -n "$PACKAGE/$ACTIVITY" || true
             echo "Waiting 30s for React Native bundle to fully render..."
             sleep 30
 
-            # ── Step 6: Dismiss any ANR that appeared during app startup ──────────
-            dismiss_anr
+            # ── Step 6: Dismiss any ANR that appeared during app startup ──────
+            echo "Dismissing any ANR dialogs after app launch..."
+            adb shell input keyevent 4 || true
+            sleep 1
+            adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS || true
+            sleep 2
 
-            # ── Step 7: Capture pre-test diagnostic screenshot + XML dump ─────────
+            # ── Step 7: Capture pre-test diagnostic screenshot + XML dump ─────
             mkdir -p logs
             adb shell screencap -p /sdcard/pre_test_screen.png || true
             adb pull /sdcard/pre_test_screen.png logs/pre_test_screen.png || true
@@ -220,11 +218,11 @@ jobs:
             echo "=== PRE-TEST SCREEN XML ==="
             cat logs/window_dump.xml | head -100 || true
 
-            # ── Step 8: Force-stop app — let Appium session do fresh launch ───────
+            # ── Step 8: Force-stop — let Appium do fresh launch ───────────────
             adb shell am force-stop "$PACKAGE" || true
             sleep 2
 
-            # ── Step 9: Run Maven tests ───────────────────────────────────────────
+            # ── Step 9: Run Maven tests ───────────────────────────────────────
             ${{ env.TEST_COMMAND }}
 
 

@@ -60,16 +60,30 @@ jobs:
           echo "ios.devicePasscode=000000" >> config/credentials.properties
 
 
+      # Cache Appium and Drivers
+      - name: Cache Appium & Drivers
+        uses: actions/cache@v4
+        id: appium-cache
+        with:
+          path: |
+            ~/.appium
+            ~/.npm
+          key: ${{ runner.os }}-appium-2.0-v2
+
       - name: Install Appium
         run: |
-          npm install -g appium
+          if ! command -v appium &> /dev/null; then
+            npm install -g appium
+          fi
           appium -v
 
       # Android Setup
       - name: Setup Android Driver
         if: ${{ github.event.inputs.platform == 'android' }}
         run: |
-          appium driver install uiautomator2
+          if ! appium driver list --installed | grep -q uiautomator2; then
+            appium driver install uiautomator2
+          fi
 
       - name: Ensure Android PROD APK Available
         if: ${{ github.event.inputs.platform == 'android' }}
@@ -85,7 +99,9 @@ jobs:
       - name: Setup iOS Driver & Simulator
         if: ${{ github.event.inputs.platform == 'ios' }}
         run: |
-          appium driver install xcuitest
+          if ! appium driver list --installed | grep -q xcuitest; then
+            appium driver install xcuitest
+          fi
           
           # Unpack iOS App if zipped
           for zipfile in apps/prod/*.zip apps/*.zip; do
@@ -95,6 +111,7 @@ jobs:
               unzip -o "$zipfile" -d apps/prod/
             fi
           done
+
 
           # Boot iPhone 15 Simulator
           UDID=$(xcrun simctl list devices available | grep "iPhone 15" | head -1 | grep -oE "\([0-9A-F-]+\)" | tr -d "()")

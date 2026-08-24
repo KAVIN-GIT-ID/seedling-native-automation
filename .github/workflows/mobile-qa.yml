@@ -129,6 +129,11 @@ jobs:
       - name: Run Android Tests on Emulator
         if: ${{ github.event.inputs.platform == 'android' }}
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          QA_USERNAME: ${{ secrets.QA_USERNAME }}
+          QA_PASSWORD: ${{ secrets.QA_PASSWORD }}
+          PROD_USERNAME: ${{ secrets.PROD_USERNAME }}
+          PROD_PASSWORD: ${{ secrets.PROD_PASSWORD }}
         with:
           api-level: 31
           target: default
@@ -140,7 +145,13 @@ jobs:
 
       - name: Run iOS Tests on Simulator
         if: ${{ github.event.inputs.platform == 'ios' }}
+        env:
+          QA_USERNAME: ${{ secrets.QA_USERNAME }}
+          QA_PASSWORD: ${{ secrets.QA_PASSWORD }}
+          PROD_USERNAME: ${{ secrets.PROD_USERNAME }}
+          PROD_PASSWORD: ${{ secrets.PROD_PASSWORD }}
         run: ${{ env.TEST_COMMAND }}
+
 
       - name: Upload Test Report
         uses: actions/upload-artifact@v4

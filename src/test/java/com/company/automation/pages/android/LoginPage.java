@@ -12,26 +12,37 @@ import java.util.List;
 public class LoginPage extends BasePage implements ILoginPage {
 
     private final By permissionAllowButton = By.xpath(
-            "//android.widget.Button[@resource-id='com.android.permissioncontroller:id/permission_allow_button' or @text='Allow']"
+            "//android.widget.Button[@resource-id='com.android.permissioncontroller:id/permission_allow_button' " +
+            "or @resource-id='com.android.permissioncontroller:id/permission_allow_foreground_only_button' " +
+            "or @resource-id='com.android.permissioncontroller:id/permission_allow_one_time_button' " +
+            "or contains(@text, 'Allow') " +
+            "or contains(@text, 'While using') " +
+            "or contains(@text, 'ALLOW')]"
     );
     private final By usernameField = By.xpath(
-            "(//android.widget.EditText[not(@password='true')])[1] | (//android.widget.EditText)[1]"
+            "(//android.widget.EditText[contains(@text, 'Email') or contains(@content-desc, 'Email') or contains(@hint, 'Email') or not(@password='true')])[1] " +
+            "| (//android.widget.EditText)[1]"
     );
     private final By passwordField = By.xpath(
             "//android.widget.EditText[@password='true'] | (//android.widget.EditText)[2]"
     );
-    // Explicitly target the clickable button ViewGroup with content-desc="Sign In" to avoid matching the title header
-    private final By loginButton = AppiumBy.accessibilityId("Sign In");
+    // Explicitly target the clickable button ViewGroup with content-desc="Sign In" or text="Sign In"
+    private final By loginButton = By.xpath("//*[@content-desc='Sign In' or @text='Sign In' or contains(@text, 'Sign In')]");
     private final By errorMessage = AppiumBy.accessibilityId("login-error-text");
 
     @Override
     public void handlePermissionIfPresent() {
         try {
-            driver().manage().timeouts().implicitlyWait(Duration.ofSeconds(3));
+            driver().manage().timeouts().implicitlyWait(Duration.ofSeconds(2));
             List<WebElement> allowButtons = driver().findElements(permissionAllowButton);
-            if (!allowButtons.isEmpty() && allowButtons.get(0).isDisplayed()) {
-                allowButtons.get(0).click();
-                logStep("Handled notification permission popup by tapping Allow");
+            if (!allowButtons.isEmpty()) {
+                for (WebElement btn : allowButtons) {
+                    if (btn.isDisplayed()) {
+                        btn.click();
+                        logStep("Handled notification / system permission popup");
+                        break;
+                    }
+                }
             }
         } catch (Exception ignored) {
             // Permission dialog didn't appear, continue smoothly
@@ -43,20 +54,20 @@ public class LoginPage extends BasePage implements ILoginPage {
     @Override
     public void enterUsername(String username) {
         handlePermissionIfPresent();
-        tap(usernameField, "Email / Username Field");
         type(usernameField, username, "Email / Username Field");
     }
 
     @Override
     public void enterPassword(String password) {
-        tap(passwordField, "Password Field");
         type(passwordField, password, "Password Field");
     }
 
     @Override
     public void tapLogin() {
+        hideKeyboard();
         tap(loginButton, "Sign In Button");
     }
+
 
     @Override
     public void tapGoogleSignIn() {

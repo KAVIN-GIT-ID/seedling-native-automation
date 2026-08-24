@@ -52,6 +52,16 @@ public abstract class BaseTest {
         try {
             Thread.sleep(3000);
         } catch (InterruptedException ignored) {}
+
+        // Start screen recording for UI test execution video
+        try {
+            if (DriverManager.getDriver() instanceof io.appium.java_client.screenrecording.CanRecordScreen) {
+                ((io.appium.java_client.screenrecording.CanRecordScreen) DriverManager.getDriver()).startRecordingScreen();
+                log.info("🎥 Started Appium screen recording");
+            }
+        } catch (Exception e) {
+            log.info("Screen recording notice: {}", e.getMessage());
+        }
     }
 
 
@@ -89,6 +99,24 @@ public abstract class BaseTest {
             log.warn("Test failed on {}: {}. Screenshot and details attached to ExtentReport.",
                     DriverManager.getPlatform(), result.getMethod().getMethodName());
         }
+
+        // Stop screen recording and save MP4 video artifact
+        try {
+            if (DriverManager.getDriver() != null && DriverManager.getDriver() instanceof io.appium.java_client.screenrecording.CanRecordScreen) {
+                String base64Video = ((io.appium.java_client.screenrecording.CanRecordScreen) DriverManager.getDriver()).stopRecordingScreen();
+                if (base64Video != null && !base64Video.isEmpty()) {
+                    byte[] videoBytes = java.util.Base64.getDecoder().decode(base64Video);
+                    java.nio.file.Path logsDir = java.nio.file.Path.of("logs");
+                    java.nio.file.Files.createDirectories(logsDir);
+                    String videoName = result.getMethod().getMethodName() + "_" + System.currentTimeMillis() + ".mp4";
+                    java.nio.file.Files.write(logsDir.resolve(videoName), videoBytes);
+                    log.info("🎥 Saved screen recording video to logs/{}", videoName);
+                }
+            }
+        } catch (Exception e) {
+            log.info("Screen recording save notice: {}", e.getMessage());
+        }
+
         DriverManager.quitDriver();
     }
 }

@@ -168,6 +168,10 @@ jobs:
           disable-animations: true
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
           script: |
+            # ── Clean old logs & reports to guarantee fresh artifacts ─────────
+            rm -rf logs target
+            mkdir -p logs
+
             # ── Step 1: Start Appium in background ────────────────────────────
             nohup appium --log appium.log --port 4723 > /dev/null 2>&1 &
             echo "Waiting 15s for Appium to be ready..."

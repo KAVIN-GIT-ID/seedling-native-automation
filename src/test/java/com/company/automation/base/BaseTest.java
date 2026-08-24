@@ -11,6 +11,7 @@ import com.company.automation.pages.LoginPageFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
+import java.io.File;
 import java.util.List;
 import org.testng.ITestContext;
 import org.testng.ITestResult;
@@ -41,7 +42,18 @@ public abstract class BaseTest {
         platform = platform.toLowerCase().trim();
 
         DriverManager.setPlatform(platform);
-        log.info("Starting test on platform={} env={}", platform, env);
+        // Clean old MP4 recordings so logs/ only contains the latest current run video
+        try {
+            File logsDir = new File("logs");
+            if (logsDir.exists() && logsDir.isDirectory()) {
+                File[] files = logsDir.listFiles((dir, name) -> name.endsWith(".mp4"));
+                if (files != null) {
+                    for (File f : files) {
+                        f.delete();
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
 
         if (platform.equals("ios")) {
             DriverManager.setDriver(IOSDriverFactory.create());

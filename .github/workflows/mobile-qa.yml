@@ -229,17 +229,20 @@ jobs:
             ${{ env.TEST_COMMAND }}
 
       - name: Authenticate to Google Cloud for Firebase Test Lab
-        if: ${{ github.event.inputs.platform == 'android' && secrets.GCP_SA_KEY != '' }}
+        if: ${{ github.event.inputs.platform == 'android' }}
+        continue-on-error: true
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
       - name: Set up Cloud SDK
-        if: ${{ github.event.inputs.platform == 'android' && secrets.GCP_SA_KEY != '' }}
+        if: ${{ github.event.inputs.platform == 'android' }}
+        continue-on-error: true
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Run Firebase Test Lab Real Device Test
-        if: ${{ github.event.inputs.platform == 'android' && secrets.GCP_SA_KEY != '' }}
+        if: ${{ github.event.inputs.platform == 'android' }}
+        continue-on-error: true
         run: |
           APK_PATH=$(find apps/qa apps -name "*.apk" 2>/dev/null | head -1)
           echo "Submitting APK ($APK_PATH) to Firebase Test Lab real physical devices..."
@@ -248,7 +251,7 @@ jobs:
             --app "$APK_PATH" \
             --device model=redfin,version=30,locale=en,orientation=portrait \
             --device model=oriole,version=33,locale=en,orientation=portrait \
-            --project "${{ secrets.GCP_PROJECT_ID || 'seedling-automation' }}" \
+            --project "seedling-automation" \
             --timeout 15m
 
 

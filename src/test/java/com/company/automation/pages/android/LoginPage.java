@@ -9,8 +9,14 @@ import org.openqa.selenium.WebElement;
 import java.time.Duration;
 import java.util.List;
 
+/**
+ * Enterprise-grade Android LoginPage Page Object.
+ * Built with multi-strategy element resolution, automated system permission bypass,
+ * onboarding/landing screen auto-navigation, and resilient keyboard handling.
+ */
 public class LoginPage extends BasePage implements ILoginPage {
 
+    // System Permission Dialog Locators
     private final By permissionAllowButton = By.xpath(
             "//android.widget.Button[@resource-id='com.android.permissioncontroller:id/permission_allow_button' " +
             "or @resource-id='com.android.permissioncontroller:id/permission_allow_foreground_only_button' " +
@@ -19,15 +25,22 @@ public class LoginPage extends BasePage implements ILoginPage {
             "or contains(@text, 'While using') " +
             "or contains(@text, 'ALLOW')]"
     );
-    private final By usernameField = By.xpath(
-            "(//android.widget.EditText[contains(@text, 'Email') or contains(@content-desc, 'Email') or contains(@hint, 'Email') or not(@password='true')])[1] " +
-            "| (//android.widget.EditText)[1]"
+
+    // Landing / Onboarding Screen Action Button
+    private final By landingActionButton = By.xpath(
+            "//*[@content-desc='Sign In' or @text='Sign In' or @content-desc='Log In' or @text='Log In' " +
+            "or @content-desc='Get Started' or @text='Get Started' or @content-desc='Continue' or @text='Continue']"
     );
-    private final By passwordField = By.xpath(
-            "//android.widget.EditText[@password='true'] | (//android.widget.EditText)[2]"
+
+    // Primary Field Locators
+    private final By editTextFields = AppiumBy.className("android.widget.EditText");
+    private final By usernameFallback = By.xpath("//android.widget.EditText[not(@password='true')]");
+    private final By passwordFallback = By.xpath("//android.widget.EditText[@password='true']");
+
+    // Login Action Button Locators
+    private final By loginButton = By.xpath(
+            "//*[@content-desc='Sign In' or @text='Sign In' or @content-desc='Log In' or @text='Log In']"
     );
-    // Explicitly target the clickable button ViewGroup with content-desc="Sign In" or text="Sign In"
-    private final By loginButton = By.xpath("//*[@content-desc='Sign In' or @text='Sign In' or contains(@text, 'Sign In')]");
     private final By errorMessage = AppiumBy.accessibilityId("login-error-text");
 
     @Override
@@ -39,50 +52,90 @@ public class LoginPage extends BasePage implements ILoginPage {
                 for (WebElement btn : allowButtons) {
                     if (btn.isDisplayed()) {
                         btn.click();
-                        logStep("Handled notification / system permission popup");
+                        logStep("✅ Handled system permission popup");
                         break;
                     }
                 }
             }
         } catch (Exception ignored) {
-            // Permission dialog didn't appear, continue smoothly
+            // Permission dialog not present, continue smoothly
         } finally {
             driver().manage().timeouts().implicitlyWait(Duration.ofSeconds(0));
         }
     }
 
-    @Override
-    public void enterUsername(String username) {
+    /**
+     * Auto-detects and handles any initial Welcome/Landing/Get Started screen.
+     */
+    private void navigateToLoginFormIfOnLandingScreen() {
         handlePermissionIfPresent();
-
-        // If app opened on a landing / welcome screen, tap the initial Sign In / Get Started button
         try {
-            if (driver().findElements(usernameField).isEmpty()) {
-                By landingBtn = By.xpath("//*[@content-desc='Sign In' or @text='Sign In' or @content-desc='Log In' or @text='Log In' or @content-desc='Get Started' or @text='Get Started']");
-                List<WebElement> btns = driver().findElements(landingBtn);
-                if (!btns.isEmpty() && btns.get(0).isDisplayed()) {
-                    btns.get(0).click();
-                    logStep("Tapped on Landing Screen button to navigate to Login form");
-                    Thread.sleep(2000);
+            List<WebElement> inputs = driver().findElements(editTextFields);
+            if (inputs.isEmpty()) {
+                List<WebElement> landingBtns = driver().findElements(landingActionButton);
+                if (!landingBtns.isEmpty() && landingBtns.get(0).isDisplayed()) {
+                    landingBtns.get(0).click();
+                    logStep("✅ Tapped on Landing/Welcome Screen button to open Login form");
+                    Thread.sleep(2500);
                 }
             }
         } catch (Exception ignored) {}
-
-        type(usernameField, username, "Email / Username Field");
     }
 
+    @Override
+    public void enterUsername(String username) {
+        navigateToLoginFormIfOnLandingScreen();
+        hideKeyboard();
+
+        // 1. Wait for input fields to be present
+        try {
+            getWait().waitForPresence(editTextFields);
+        } catch (Exception ignored) {}
+
+        // 2. Locate and enter username into the first input field
+        List<WebElement> inputs = driver().findElements(editTextFields);
+        if (!inputs.isEmpty()) {
+            WebElement emailInput = inputs.get(0);
+            emailInput.click();
+            emailInput.clear();
+            emailInput.sendKeys(username);
+            logStep("Entered username into Email field via Native ClassName");
+        } else {
+            type(usernameFallback, username, "Email / Username Field");
+        }
+    }
 
     @Override
     public void enterPassword(String password) {
-        type(passwordField, password, "Password Field");
+        // Locate and enter password into the second input field (or password-specific field)
+        List<WebElement> inputs = driver().findElements(editTextFields);
+        if (inputs.size() > 1) {
+            WebElement pwdInput = inputs.get(1);
+            pwdInput.click();
+            pwdInput.clear();
+            pwdInput.sendKeys(password);
+            logStep("Entered password into Password field via Native ClassName");
+        } else {
+            type(passwordFallback, password, "Password Field");
+        }
+        hideKeyboard();
     }
 
     @Override
     public void tapLogin() {
         hideKeyboard();
+        try {
+            List<WebElement> btns = driver().findElements(loginButton);
+            if (!btns.isEmpty()) {
+                // Click the last visible matching Sign In button (the primary action button on form)
+                btns.get(btns.size() - 1).click();
+                logStep("Tapped on Sign In Button");
+                return;
+            }
+        } catch (Exception ignored) {}
+
         tap(loginButton, "Sign In Button");
     }
-
 
     @Override
     public void tapGoogleSignIn() {
@@ -94,7 +147,6 @@ public class LoginPage extends BasePage implements ILoginPage {
     @Override
     public void tapAppleSignIn() {
         logStep("Apple Sign-In on Android (Web OAuth)");
-        // Android fallback for Apple sign-in webview / custom tabs
         By appleBtn = AppiumBy.xpath("//*[contains(@content-desc, 'Apple') or contains(@text, 'Apple')]");
         tap(appleBtn, "Sign In with Apple (Android)");
     }
@@ -116,3 +168,4 @@ public class LoginPage extends BasePage implements ILoginPage {
         return getText(errorMessage, "Error Message");
     }
 }
+

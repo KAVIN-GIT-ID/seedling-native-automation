@@ -37,16 +37,17 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
     private final By coSponsorSearchField = By.xpath("(//android.widget.EditText)[3]");
 
     // Step 3 Fields
-    private final By seedlingGoalField = By.xpath("//android.widget.EditText[contains(@bounds, '491')] | (//android.widget.EditText)[1]");
+    private final By seedlingGoalField = By.xpath("(//android.widget.EditText)[1]");
     private final By endSeedlingCheckbox = By.xpath(
             "//android.view.ViewGroup[@bounds='[77,682][140,745]' or contains(@bounds, '[77,682]')] | " +
             "//*[contains(@text, 'goal is met') or contains(@text, 'End seedling')]"
     );
-    private final By campaignGoalField = By.xpath("//android.widget.EditText[contains(@bounds, '1329')] | (//android.widget.EditText)[2]");
+    private final By campaignGoalField = By.xpath("(//android.widget.EditText)[2]");
     private final By endCampaignCheckbox = By.xpath(
             "//android.view.ViewGroup[@bounds='[77,1494][140,1557]' or contains(@bounds, '[77,1494]')] | " +
             "//*[contains(@text, 'End campaign') or contains(@text, 'campaign if')]"
     );
+
 
     @Override
     public void tapCreateTab() {

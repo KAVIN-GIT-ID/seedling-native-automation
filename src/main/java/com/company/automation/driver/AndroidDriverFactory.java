@@ -64,11 +64,14 @@ public final class AndroidDriverFactory {
         UiAutomator2Options options = new UiAutomator2Options()
                 .setAppPackage(ConfigManager.env("android.appPackage"))
                 .setAppActivity(ConfigManager.env("android.appActivity"))
+                .setAppWaitActivity("*")
+                .setAppWaitDuration(Duration.ofSeconds(30))
                 .setAutoGrantPermissions(true)
                 .setNoReset(false)
                 .setAdbExecTimeout(Duration.ofSeconds(120))
                 .setUiautomator2ServerLaunchTimeout(Duration.ofSeconds(120))
                 .setNewCommandTimeout(Duration.ofSeconds(240));
+
 
         // Only set platformVersion / deviceName if explicitly overridden via -D flags
         String explicitVersion = System.getProperty("platformVersion");

@@ -13,8 +13,9 @@ public class WaitUtils {
     private final WebDriverWait wait;
 
     public WaitUtils(AppiumDriver driver) {
-        this.wait = new WebDriverWait(driver, Duration.ofSeconds(20));
+        this.wait = new WebDriverWait(driver, Duration.ofSeconds(35));
     }
+
 
     public WebElement waitForVisible(By locator) {
         return wait.until(ExpectedConditions.visibilityOfElementLocated(locator));

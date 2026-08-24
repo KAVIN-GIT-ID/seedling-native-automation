@@ -64,46 +64,59 @@ public class LoginPage extends BasePage implements ILoginPage {
         }
     }
 
-    /**
-     * Auto-detects and handles any initial Welcome/Landing/Get Started screen.
-     */
-    private void navigateToLoginFormIfOnLandingScreen() {
-        handlePermissionIfPresent();
-        try {
-            List<WebElement> inputs = driver().findElements(editTextFields);
-            if (inputs.isEmpty()) {
-                List<WebElement> landingBtns = driver().findElements(landingActionButton);
-                if (!landingBtns.isEmpty() && landingBtns.get(0).isDisplayed()) {
-                    landingBtns.get(0).click();
-                    logStep("✅ Tapped on Landing/Welcome Screen button to open Login form");
-                    Thread.sleep(2500);
-                }
-            }
-        } catch (Exception ignored) {}
-    }
-
     @Override
     public void enterUsername(String username) {
-        navigateToLoginFormIfOnLandingScreen();
+        logStep("Resolving login screen elements...");
+
+        // Active State Machine: Poll for up to 45s for Splash -> Permissions -> Landing Screen -> Login Inputs
+        long startTime = System.currentTimeMillis();
+        long timeoutMs = 45000;
+
+        while (System.currentTimeMillis() - startTime < timeoutMs) {
+            handlePermissionIfPresent();
+
+            // 1. Check if EditText inputs are already present on screen
+            List<WebElement> inputs = driver().findElements(editTextFields);
+            if (!inputs.isEmpty() && inputs.get(0).isDisplayed()) {
+                logStep("✅ Detected active Login Form inputs");
+                break;
+            }
+
+            // 2. Check if a Landing Screen / Welcome Button is displayed
+            List<WebElement> landingBtns = driver().findElements(landingActionButton);
+            if (!landingBtns.isEmpty()) {
+                for (WebElement btn : landingBtns) {
+                    try {
+                        if (btn.isDisplayed()) {
+                            btn.click();
+                            logStep("✅ Tapped on Landing/Welcome Screen button to open Login form");
+                            Thread.sleep(2000);
+                            break;
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignored) {}
+        }
+
         hideKeyboard();
 
-        // 1. Wait for input fields to be present
-        try {
-            getWait().waitForPresence(editTextFields);
-        } catch (Exception ignored) {}
-
-        // 2. Locate and enter username into the first input field
+        // 3. Locate and enter username into the first input field
         List<WebElement> inputs = driver().findElements(editTextFields);
         if (!inputs.isEmpty()) {
             WebElement emailInput = inputs.get(0);
             emailInput.click();
             emailInput.clear();
             emailInput.sendKeys(username);
-            logStep("Entered username into Email field via Native ClassName");
+            logStep("✅ Entered username into Email field");
         } else {
             type(usernameFallback, username, "Email / Username Field");
         }
     }
+
 
     @Override
     public void enterPassword(String password) {

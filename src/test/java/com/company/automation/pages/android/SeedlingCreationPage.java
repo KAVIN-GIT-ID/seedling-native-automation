@@ -163,7 +163,15 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
             try { Thread.sleep(1500); } catch (InterruptedException ignored) {}
         }
 
-        // If not found after 20 seconds:
+        // If not found after 20 seconds, attempt coordinate tap fallback first
+        try {
+            logStep("Attempting coordinate tap fallback for 'Create New Seedling' card at (540, 600)...");
+            tapByCoordinates(540, 600, "Create New Seedling Card (Coordinates)");
+            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+            captureDebugSnapshot("04_tapped_create_new_seedling_coordinates");
+            return;
+        } catch (Exception ignored) {}
+
         captureDebugSnapshot("FAILED_create_new_seedling_not_found");
         dumpPageSource("FAILURE — Create New Seedling button not found");
         logStep("❌ Failed to find 'Create New Seedling' button. Attempting standard tap as final try...");

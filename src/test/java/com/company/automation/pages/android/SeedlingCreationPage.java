@@ -25,8 +25,8 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
 
     // Bottom navigation center create button locators
     private final By createTabButton = By.xpath(
-            "//*[@content-desc='AddSeedingRoute' or @content-desc='plus' or @content-desc='Create'] | " +
-            "//android.view.ViewGroup[contains(@bounds, '[432,2244]') or contains(@bounds, '[519,2294]') or contains(@bounds, '[432,20') or contains(@bounds, '[519,20')]"
+            "//*[contains(@content-desc, 'AddSeedingRoute') or contains(@content-desc, 'plus') or (contains(@content-desc, 'Create') and contains(@content-desc, 'tab')) or @content-desc='Create' or @content-desc='plus'] | " +
+            "//android.view.ViewGroup[contains(@bounds, '[432,') or contains(@bounds, '[519,') or contains(@bounds, ',21') or contains(@bounds, ',20')]"
     );
 
     // "Create New Seedling" card button locators
@@ -91,11 +91,11 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
         ensureAppInForeground();
 
         try {
-            By bottomPlusExact = By.xpath("//*[@content-desc='AddSeedingRoute' or @content-desc='plus' or @content-desc='Create']");
+            By bottomPlusExact = By.xpath("//*[contains(@content-desc, 'AddSeedingRoute') or contains(@content-desc, 'plus') or (contains(@content-desc, 'Create') and contains(@content-desc, 'tab')) or @content-desc='Create' or @content-desc='plus']");
             List<WebElement> els = driver().findElements(bottomPlusExact);
             if (!els.isEmpty()) {
                 els.get(0).click();
-                logStep("✅ Tapped Bottom Create Tab Button via exact content-desc");
+                logStep("✅ Tapped Bottom Create Tab Button via content-desc tab match");
             } else {
                 tap(createTabButton, "Bottom Create Tab Button");
             }
@@ -103,7 +103,7 @@ public class SeedlingCreationPage extends BasePage implements ISeedlingCreationP
             logStep("Locator tap failed for Create Tab, using center tab coordinates...");
             int screenWidth = driver().manage().window().getSize().getWidth();
             int screenHeight = driver().manage().window().getSize().getHeight();
-            tapByCoordinates(screenWidth / 2, (int) (screenHeight * 0.903), "Bottom Create Tab Button");
+            tapByCoordinates(screenWidth / 2, (int) (screenHeight * 0.94), "Bottom Create Tab Button");
         }
 
         try { Thread.sleep(2500); } catch (InterruptedException ignored) {}

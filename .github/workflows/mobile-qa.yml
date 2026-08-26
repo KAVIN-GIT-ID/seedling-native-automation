@@ -292,32 +292,18 @@ jobs:
             npx surge ./target ${{ github.run_id }}-seedling-mobile-qa.surge.sh
           fi
 
-      - name: Prepare Email Body
+      - name: Prepare HTML Email Body
         if: ${{ !cancelled() }}
+        env:
+          ENVIRONMENT: QA
+          PLATFORM: ${{ github.event.inputs.platform }}
+          COMPONENT: ${{ github.event.inputs.component }}
+          REPORT_URL: "https://${{ github.run_id }}-seedling-mobile-qa.surge.sh"
+          RUN_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          JOB_STATUS: ${{ job.status }}
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
-          REPORT_URL="https://${{ github.run_id }}-seedling-mobile-qa.surge.sh"
-
-          echo "Mobile App Automation test run finished." > email-body.txt
-          echo "Status: ${{ job.status }}" >> email-body.txt
-          echo "Environment: QA" >> email-body.txt
-          echo "Platform: ${{ github.event.inputs.platform }}" >> email-body.txt
-          echo "Component: ${{ github.event.inputs.component }}" >> email-body.txt
-          echo "Branch: ${{ github.ref_name }}" >> email-body.txt
-          echo "Run link: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> email-body.txt
-          echo "" >> email-body.txt
-
-          if [ "${{ job.status }}" != "success" ]; then
-            echo "=== TEST FAILURES ===" >> email-body.txt
-            if [ -f test-output.log ]; then
-              grep -E "FAILURE|ERROR|Exception|AssertionError" test-output.log | head -20 >> email-body.txt || echo "See ExtentReport for failure screenshot." >> email-body.txt
-            fi
-            echo "=====================" >> email-body.txt
-            echo "" >> email-body.txt
-          fi
-
-          echo "VIEW INTERACTIVE HTML REPORT HERE (One-Click):" >> email-body.txt
-          echo "$REPORT_URL" >> email-body.txt
-          echo "" >> email-body.txt
+          node utils/generate-email-html.js
 
       - name: Send Email Report
         if: ${{ !cancelled() && env.EMAIL_USERNAME != '' }}
@@ -329,7 +315,7 @@ jobs:
           server_port: 465
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: "Mobile QA [${{ github.event.inputs.platform }}] Run ${{ job.status }} - ${{ github.event.inputs.component }}"
+          subject: "Mobile QA [${{ github.event.inputs.platform }}] - ${{ job.status == 'success' && '✅ PASSED' || '❌ FAILED' }}"
           to: ${{ secrets.TL_EMAIL }}
           from: Seedling Automation <${{ secrets.EMAIL_USERNAME }}>
-          body: file://email-body.txt
+          html_body: file://email-body.html

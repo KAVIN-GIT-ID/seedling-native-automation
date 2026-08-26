@@ -133,11 +133,25 @@ public abstract class BaseTest {
                 String base64Video = ((io.appium.java_client.screenrecording.CanRecordScreen) DriverManager.getDriver()).stopRecordingScreen();
                 if (base64Video != null && !base64Video.isEmpty()) {
                     byte[] videoBytes = java.util.Base64.getDecoder().decode(base64Video);
+                    
+                    // Save to logs/ (for GitHub Artifacts)
                     java.nio.file.Path logsDir = java.nio.file.Path.of("logs");
                     java.nio.file.Files.createDirectories(logsDir);
                     String videoName = result.getMethod().getMethodName() + "_" + System.currentTimeMillis() + ".mp4";
                     java.nio.file.Files.write(logsDir.resolve(videoName), videoBytes);
                     log.info("🎥 Saved screen recording video to logs/{}", videoName);
+
+                    // Save to target/videos/ (for Surge deployment & ExtentReport link)
+                    java.nio.file.Path targetVideosDir = java.nio.file.Path.of("target", "videos");
+                    java.nio.file.Files.createDirectories(targetVideosDir);
+                    java.nio.file.Files.write(targetVideosDir.resolve(videoName), videoBytes);
+
+                    // Attach video link inside Extent HTML Report
+                    if (com.company.automation.reports.ExtentManager.getTest() != null) {
+                        com.company.automation.reports.ExtentManager.getTest().info(
+                            "🎥 <b>Execution Video Recording:</b> <a href='videos/" + videoName + "' target='_blank' style='color:#007bff;font-weight:bold;'>Click to Watch Video (.mp4)</a>"
+                        );
+                    }
                 }
             }
         } catch (Exception e) {

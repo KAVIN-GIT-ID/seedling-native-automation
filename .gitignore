@@ -27,6 +27,6 @@ test-output/
 .agents/
 *.log
 
-# Ignore README
-README.md
-
+# Ignore generated email report artifacts
+email-body.html
+email-body.txt

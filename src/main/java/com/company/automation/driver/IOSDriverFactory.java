@@ -70,10 +70,7 @@ public final class IOSDriverFactory {
 
         String appPath = ConfigManager.getAppPath("ios");
         if (appPath != null && !appPath.isEmpty()) {
-            java.io.File appFile = new java.io.File(appPath);
-            if (appPath.endsWith(".app") || appFile.isDirectory()) {
-                options.setApp(appPath);
-            }
+            options.setApp(appPath);
         }
 
         applyPerformanceOptimizations(options);
@@ -85,7 +82,7 @@ public final class IOSDriverFactory {
                 .setBundleId(ConfigManager.env("ios.bundleId"))
                 .setNoReset(false)
                 .setAutoAcceptAlerts(true)
-                .setWdaLaunchTimeout(Duration.ofSeconds(60))
+                .setWdaLaunchTimeout(Duration.ofSeconds(getWdaLaunchTimeoutSeconds()))
                 .setNewCommandTimeout(Duration.ofSeconds(240));
 
         String udid = System.getProperty("udid");
@@ -108,14 +105,23 @@ public final class IOSDriverFactory {
 
         String appPath = ConfigManager.getAppPath("ios");
         if (appPath != null && !appPath.isEmpty()) {
-            java.io.File appFile = new java.io.File(appPath);
-            if (appPath.endsWith(".app") || appFile.isDirectory()) {
-                options.setApp(appPath);
-            }
+            options.setApp(appPath);
         }
 
         applyPerformanceOptimizations(options);
         return createDriverInstance(ConfigManager.getAppiumUrl(), options);
+    }
+
+    private static long getWdaLaunchTimeoutSeconds() {
+        String override = System.getProperty("wdaLaunchTimeout"); // pass as -DwdaLaunchTimeout=300000 (ms)
+        if (override != null && !override.trim().isEmpty()) {
+            try {
+                return Long.parseLong(override.trim()) / 1000;
+            } catch (NumberFormatException ignored) {
+                log.warn("Invalid wdaLaunchTimeout system property '{}', falling back to default", override);
+            }
+        }
+        return 300L; // 5 minutes — cold CI runners need time to build WDA from scratch
     }
 
     private static IOSDriver createBrowserStackDriver() {

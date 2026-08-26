@@ -68,9 +68,12 @@ public final class IOSDriverFactory {
             }
         } catch (Exception ignored) {}
 
-        String appPath = ConfigManager.getAppPath();
+        String appPath = ConfigManager.getAppPath("ios");
         if (appPath != null && !appPath.isEmpty()) {
-            options.setApp(appPath);
+            java.io.File appFile = new java.io.File(appPath);
+            if (appPath.endsWith(".app") || appFile.isDirectory()) {
+                options.setApp(appPath);
+            }
         }
 
         applyPerformanceOptimizations(options);
@@ -103,9 +106,12 @@ public final class IOSDriverFactory {
             options.setPlatformVersion(explicitVersion.trim());
         }
 
-        String appPath = ConfigManager.getAppPath();
+        String appPath = ConfigManager.getAppPath("ios");
         if (appPath != null && !appPath.isEmpty()) {
-            options.setApp(appPath);
+            java.io.File appFile = new java.io.File(appPath);
+            if (appPath.endsWith(".app") || appFile.isDirectory()) {
+                options.setApp(appPath);
+            }
         }
 
         applyPerformanceOptimizations(options);

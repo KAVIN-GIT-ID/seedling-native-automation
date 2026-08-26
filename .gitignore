@@ -12,6 +12,8 @@ config/cloud.properties
 
 # Ignore large APK files (>100MB) from git (CI downloads automatically)
 apps/*.apk
+apps/**/*.apk
+*.apk
 
 # Node and environment files
 node_modules/

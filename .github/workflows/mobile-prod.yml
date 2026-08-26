@@ -165,7 +165,19 @@ jobs:
           QA_PASSWORD: ${{ secrets.QA_PASSWORD }}
           PROD_USERNAME: ${{ secrets.PROD_USERNAME }}
           PROD_PASSWORD: ${{ secrets.PROD_PASSWORD }}
-        run: ${{ env.TEST_COMMAND }}
+        run: |
+          # ── Clean old logs & reports ──────────────────────────────────────
+          rm -rf logs target
+          mkdir -p logs
+
+          # ── Start Appium in background ────────────────────────────────────
+          nohup appium --log appium.log --port 4723 > /dev/null 2>&1 &
+          echo "Waiting 15s for Appium server to be ready on port 4723..."
+          sleep 15
+          curl --retry 5 --retry-delay 2 --retry-connrefused http://127.0.0.1:4723/status || echo "Appium warming up..."
+
+          # ── Run Maven tests ───────────────────────────────────────────────
+          ${{ env.TEST_COMMAND }}
 
 
       - name: Upload Test Report

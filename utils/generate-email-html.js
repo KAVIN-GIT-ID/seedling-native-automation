@@ -81,8 +81,8 @@ const statusBadgeHtml = isSuccess
     : `<span class="status-badge status-fail">✕ FAILED</span>`;
 
 const now = new Date();
-const dateOptions = { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZoneName: 'short' };
-const currentDateStr = now.toLocaleDateString('en-GB', dateOptions);
+const dateOptions = { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' };
+const currentDateStr = now.toLocaleString('en-GB', dateOptions) + ' IST';
 
 const htmlTemplate = `<!DOCTYPE html>
 <html lang="en">
@@ -295,6 +295,35 @@ const htmlTemplate = `<!DOCTYPE html>
       color: #9CA3AF;
       border-top: 1px solid #EDEFEC;
     }
+    .preview-section {
+      margin-top: 28px;
+    }
+    .preview-label {
+      font-weight: 700;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6B7280;
+      margin-bottom: 10px;
+    }
+    .preview-frame-wrap {
+      border: 1px solid #EDEFEC;
+      border-radius: 10px;
+      overflow: hidden;
+      background-color: #FAFAFA;
+    }
+    .preview-frame {
+      width: 100%;
+      height: 480px;
+      border: none;
+      display: block;
+    }
+    .preview-note {
+      font-size: 11px;
+      color: #9CA3AF;
+      margin-top: 8px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -389,6 +418,16 @@ const htmlTemplate = `<!DOCTYPE html>
         </div>
         ` : ''}
       </div>
+
+      ${reportUrl && reportUrl.startsWith('http') ? `
+      <div class="preview-section">
+        <div class="preview-label">Report Preview</div>
+        <div class="preview-frame-wrap">
+          <iframe class="preview-frame" src="${reportUrl}" title="Appium Report Preview" loading="lazy"></iframe>
+        </div>
+        <div class="preview-note">If the preview doesn't load, use the "Open Full Report &amp; Screen Recording" button above.</div>
+      </div>
+      ` : ''}
     </div>
 
     <div class="footer">

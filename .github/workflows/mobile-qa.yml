@@ -102,15 +102,9 @@ jobs:
           if [ "${{ github.event.inputs.force_fresh_app }}" = "true" ] || ! ls apps/qa/*.apk apps/*.apk 1> /dev/null 2>&1; then
             echo "Downloading QA APK from Google Drive..."
             python3 -m pip install --break-system-packages --quiet gdown
-            python3 -m gdown --fuzzy "https://drive.google.com/uc?id=1dDV9FrZieZXvqcirdp5Brm_pPrYzu1Mf" -O apps/qa/seedling-dev.apk || {
-              echo "⚠️ Google Drive download failed or rate limited."
-              if ls apps/qa/*.apk apps/*.apk 1> /dev/null 2>&1; then
-                echo "✅ Using pre-existing/cached APK file in apps folder."
-              else
-                echo "❌ ERROR: Cannot download APK from Google Drive and no local APK found in apps/qa/."
-                echo "Please update Google Drive link sharing permissions to 'Anyone with the link' OR commit your seedling-dev.apk into apps/qa/."
-                exit 1
-              fi
+            python3 -m gdown 1dDV9FrZieZXvqcirdp5Brm_pPrYzu1Mf -O apps/qa/seedling-dev.apk || {
+              echo "⚠️ gdown failed. Attempting fallback download..."
+              curl -s -L "https://drive.google.com/uc?export=download&id=1dDV9FrZieZXvqcirdp5Brm_pPrYzu1Mf" -o apps/qa/seedling-dev.apk
             }
           else
             echo "Found existing/cached APK file in apps folder."

@@ -134,6 +134,14 @@ jobs:
           xcrun simctl bootstatus $UDID -b || true
           echo "IOS_UDID=$UDID" >> $GITHUB_ENV
 
+          # Install unzipped .app to iOS simulator
+          for appdir in apps/qa/*.app apps/*.app; do
+            if [ -d "$appdir" ]; then
+              echo "Pre-installing $appdir into simulator $UDID..."
+              xcrun simctl install $UDID "$appdir" || true
+            fi
+          done
+
 
 
       - name: Determine Test Command

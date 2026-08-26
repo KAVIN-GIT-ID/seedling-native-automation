@@ -133,21 +133,11 @@ public final class ConfigManager {
             if (found != null) return found;
         }
 
-        // 2. Check root apps/ folder for env-matched files (e.g. seedling-prod.apk)
+        // 2. Check root apps/ folder for env-matched files (e.g. seedling-prod.apk or .app)
         java.io.File appsDir = new java.io.File("apps");
         if (appsDir.exists() && appsDir.isDirectory()) {
-            java.io.File[] files = appsDir.listFiles();
-            if (files != null) {
-                for (java.io.File file : files) {
-                    String name = file.getName().toLowerCase();
-                    if ((name.endsWith(targetExt) || (platform.equalsIgnoreCase("ios") && name.endsWith(".zip")))
-                            && (name.contains(envName) || (envName.equals("qa") && name.contains("dev")))) {
-                        return file.getAbsolutePath();
-                    }
-                }
-                // Fallback to any matching extension in apps/
-                return findAppInDir(appsDir, platform, targetExt);
-            }
+            String found = findAppInDir(appsDir, platform, targetExt);
+            if (found != null) return found;
         }
         return null;
     }
@@ -155,13 +145,19 @@ public final class ConfigManager {
     private static String findAppInDir(java.io.File dir, String platform, String targetExt) {
         java.io.File[] files = dir.listFiles();
         if (files != null) {
+            // First priority: Exact extension match (.app directory / .apk file)
             for (java.io.File file : files) {
                 String name = file.getName().toLowerCase();
                 if (name.endsWith(targetExt)) {
                     return file.getAbsolutePath();
                 }
-                if (platform.equalsIgnoreCase("ios") && name.endsWith(".zip")) {
-                    return file.getAbsolutePath();
+            }
+            // Second priority: .zip fallback for iOS if .app not found
+            if (platform.equalsIgnoreCase("ios")) {
+                for (java.io.File file : files) {
+                    if (file.getName().toLowerCase().endsWith(".zip")) {
+                        return file.getAbsolutePath();
+                    }
                 }
             }
         }

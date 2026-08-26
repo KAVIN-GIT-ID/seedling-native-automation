@@ -80,12 +80,16 @@ public final class IOSDriverFactory {
     private static IOSDriver createCiDriver() {
         XCUITestOptions options = new XCUITestOptions()
                 .setDeviceName(ConfigManager.getDeviceName("ios"))
-                .setPlatformVersion(ConfigManager.getPlatformVersion("ios"))
                 .setBundleId(ConfigManager.env("ios.bundleId"))
                 .setNoReset(false)
                 .setAutoAcceptAlerts(true)
                 .setWdaLaunchTimeout(Duration.ofSeconds(180))
                 .setNewCommandTimeout(Duration.ofSeconds(240));
+
+        String explicitVersion = System.getProperty("platformVersion");
+        if (explicitVersion != null && !explicitVersion.trim().isEmpty()) {
+            options.setPlatformVersion(explicitVersion.trim());
+        }
 
         String appPath = ConfigManager.getAppPath();
         if (appPath != null && !appPath.isEmpty()) {

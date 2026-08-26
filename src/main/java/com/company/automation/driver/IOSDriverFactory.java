@@ -79,16 +79,23 @@ public final class IOSDriverFactory {
 
     private static IOSDriver createCiDriver() {
         XCUITestOptions options = new XCUITestOptions()
-                .setDeviceName(ConfigManager.getDeviceName("ios"))
                 .setBundleId(ConfigManager.env("ios.bundleId"))
                 .setNoReset(false)
                 .setAutoAcceptAlerts(true)
-                .setWdaLaunchTimeout(Duration.ofSeconds(180))
+                .setWdaLaunchTimeout(Duration.ofSeconds(60))
                 .setNewCommandTimeout(Duration.ofSeconds(240));
 
-        String explicitDevice = System.getProperty("deviceName");
-        if (explicitDevice != null && !explicitDevice.trim().isEmpty()) {
-            options.setDeviceName(explicitDevice.trim());
+        String udid = System.getProperty("udid");
+        if (udid == null || udid.trim().isEmpty()) {
+            udid = System.getenv("IOS_UDID");
+        }
+        if (udid != null && !udid.trim().isEmpty()) {
+            options.setUdid(udid.trim());
+        } else {
+            String explicitDevice = System.getProperty("deviceName");
+            options.setDeviceName((explicitDevice != null && !explicitDevice.trim().isEmpty()) 
+                    ? explicitDevice.trim() 
+                    : ConfigManager.getDeviceName("ios"));
         }
 
         String explicitVersion = System.getProperty("platformVersion");

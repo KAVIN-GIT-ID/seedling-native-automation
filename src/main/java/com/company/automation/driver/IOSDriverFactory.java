@@ -86,6 +86,11 @@ public final class IOSDriverFactory {
                 .setWdaLaunchTimeout(Duration.ofSeconds(180))
                 .setNewCommandTimeout(Duration.ofSeconds(240));
 
+        String explicitDevice = System.getProperty("deviceName");
+        if (explicitDevice != null && !explicitDevice.trim().isEmpty()) {
+            options.setDeviceName(explicitDevice.trim());
+        }
+
         String explicitVersion = System.getProperty("platformVersion");
         if (explicitVersion != null && !explicitVersion.trim().isEmpty()) {
             options.setPlatformVersion(explicitVersion.trim());

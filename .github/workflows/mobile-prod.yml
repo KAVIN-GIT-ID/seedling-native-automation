@@ -185,10 +185,10 @@ jobs:
           retention-days: 30
 
       - name: Deploy Report to Surge
-        if: ${{ !cancelled() && env.SURGE_LOGIN != '' }}
+        if: ${{ !cancelled() }}
         env:
-          SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
-          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+          SURGE_LOGIN: ${{ secrets.SURGE_LOGIN || 'kavinap@uit.ac.in' }}
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN || '8d9007929b91f647f65f8f3667da6ae0' }}
         run: |
           if [ -f target/index.html ]; then
             npx surge ./target ${{ github.run_id }}-seedling-mobile-prod.surge.sh
@@ -208,16 +208,14 @@ jobs:
           node utils/generate-email-html.js
 
       - name: Send Email Report
-        if: ${{ !cancelled() && env.EMAIL_USERNAME != '' }}
+        if: ${{ !cancelled() }}
         uses: dawidd6/action-send-mail@v3
-        env:
-          EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
         with:
           server_address: smtp.gmail.com
           server_port: 465
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
+          username: ${{ secrets.EMAIL_USERNAME || 'apkavin483@gmail.com' }}
+          password: ${{ secrets.EMAIL_PASSWORD || 'cjhhgojueofrqntp' }}
           subject: "Mobile PROD [${{ github.event.inputs.platform }}] - ${{ job.status == 'success' && '✅ PASSED' || '❌ FAILED' }}"
-          to: ${{ secrets.TL_EMAIL }}
-          from: Seedling Automation <${{ secrets.EMAIL_USERNAME }}>
+          to: ${{ secrets.TL_EMAIL || 'kavinap@uit.ac.in' }}
+          from: Seedling Automation <${{ secrets.EMAIL_USERNAME || 'apkavin483@gmail.com' }}>
           html_body: file://email-body.html

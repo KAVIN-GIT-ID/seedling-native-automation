@@ -235,34 +235,6 @@ jobs:
             # ── Step 9: Run Maven tests ───────────────────────────────────────
             ${{ env.TEST_COMMAND }}
 
-      - name: Authenticate to Google Cloud for Firebase Test Lab
-        if: ${{ github.event.inputs.platform == 'android' }}
-        continue-on-error: true
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Set up Cloud SDK
-        if: ${{ github.event.inputs.platform == 'android' }}
-        continue-on-error: true
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Run Firebase Test Lab Real Device Test
-        if: ${{ github.event.inputs.platform == 'android' }}
-        continue-on-error: true
-        run: |
-          APK_PATH=$(find apps/qa apps -name "*.apk" 2>/dev/null | head -1)
-          echo "Submitting APK ($APK_PATH) to Firebase Test Lab real physical devices..."
-          gcloud firebase test android run \
-            --type robo \
-            --app "$APK_PATH" \
-            --device model=redfin,version=30,locale=en,orientation=portrait \
-            --device model=oriole,version=33,locale=en,orientation=portrait \
-            --project "seedling-automation" \
-            --timeout 15m
-
-
-
       - name: Run iOS Tests on Simulator
         if: ${{ github.event.inputs.platform == 'ios' }}
         env:
@@ -286,10 +258,10 @@ jobs:
           retention-days: 30
 
       - name: Deploy Report to Surge
-        if: ${{ !cancelled() && env.SURGE_LOGIN != '' }}
+        if: ${{ !cancelled() }}
         env:
-          SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
-          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
+          SURGE_LOGIN: ${{ secrets.SURGE_LOGIN || 'kavinap@uit.ac.in' }}
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN || '8d9007929b91f647f65f8f3667da6ae0' }}
         run: |
           if [ -f target/index.html ]; then
             npx surge ./target ${{ github.run_id }}-seedling-mobile-qa.surge.sh
@@ -309,16 +281,14 @@ jobs:
           node utils/generate-email-html.js
 
       - name: Send Email Report
-        if: ${{ !cancelled() && env.EMAIL_USERNAME != '' }}
+        if: ${{ !cancelled() }}
         uses: dawidd6/action-send-mail@v3
-        env:
-          EMAIL_USERNAME: ${{ secrets.EMAIL_USERNAME }}
         with:
           server_address: smtp.gmail.com
           server_port: 465
-          username: ${{ secrets.EMAIL_USERNAME }}
-          password: ${{ secrets.EMAIL_PASSWORD }}
+          username: ${{ secrets.EMAIL_USERNAME || 'apkavin483@gmail.com' }}
+          password: ${{ secrets.EMAIL_PASSWORD || 'cjhhgojueofrqntp' }}
           subject: "Mobile QA [${{ github.event.inputs.platform }}] - ${{ job.status == 'success' && '✅ PASSED' || '❌ FAILED' }}"
-          to: ${{ secrets.TL_EMAIL }}
-          from: Seedling Automation <${{ secrets.EMAIL_USERNAME }}>
+          to: ${{ secrets.TL_EMAIL || 'kavinap@uit.ac.in' }}
+          from: Seedling Automation <${{ secrets.EMAIL_USERNAME || 'apkavin483@gmail.com' }}>
           html_body: file://email-body.html

@@ -105,6 +105,9 @@ jobs:
               echo "Unpacking $zipfile into apps/prod/..."
               mkdir -p apps/prod
               unzip -o "$zipfile" -d apps/prod/
+              if [ -d apps/prod/Payload ]; then
+                mv apps/prod/Payload/*.app apps/prod/ 2>/dev/null || true
+              fi
             fi
           done
 

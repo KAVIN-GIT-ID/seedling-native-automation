@@ -105,7 +105,10 @@ public final class IOSDriverFactory {
 
         String appPath = ConfigManager.getAppPath("ios");
         if (appPath != null && !appPath.isEmpty()) {
-            options.setApp(appPath);
+            java.io.File appFile = new java.io.File(appPath);
+            if (appPath.endsWith(".app") || appFile.isDirectory()) {
+                options.setApp(appPath);
+            }
         }
 
         applyPerformanceOptimizations(options);

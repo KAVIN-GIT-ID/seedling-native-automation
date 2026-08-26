@@ -152,11 +152,13 @@ public final class ConfigManager {
                     return file.getAbsolutePath();
                 }
             }
-            // Second priority: .zip fallback for iOS if .app not found
-            if (platform.equalsIgnoreCase("ios")) {
-                for (java.io.File file : files) {
-                    if (file.getName().toLowerCase().endsWith(".zip")) {
-                        return file.getAbsolutePath();
+
+            // Check subdirectories (e.g. apps/qa/Payload/SeedlingApp.app)
+            for (java.io.File file : files) {
+                if (file.isDirectory() && !file.getName().toLowerCase().endsWith(".app")) {
+                    String subFound = findAppInDir(file, platform, targetExt);
+                    if (subFound != null && subFound.endsWith(targetExt)) {
+                        return subFound;
                     }
                 }
             }

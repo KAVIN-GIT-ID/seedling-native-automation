@@ -120,6 +120,9 @@ jobs:
               echo "Unpacking $zipfile into apps/qa/..."
               mkdir -p apps/qa
               unzip -o "$zipfile" -d apps/qa/
+              if [ -d apps/qa/Payload ]; then
+                mv apps/qa/Payload/*.app apps/qa/ 2>/dev/null || true
+              fi
             fi
           done
 

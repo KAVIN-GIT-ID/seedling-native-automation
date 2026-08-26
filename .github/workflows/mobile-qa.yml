@@ -95,9 +95,7 @@ jobs:
       - name: Setup Android Driver & APK
         if: ${{ github.event.inputs.platform == 'android' }}
         run: |
-          if ! appium driver list --installed | grep -q uiautomator2; then
-            appium driver install uiautomator2
-          fi
+          appium driver install uiautomator2 || true
           mkdir -p apps/qa
           if [ "${{ github.event.inputs.force_fresh_app }}" = "true" ] || ! ls apps/qa/*.apk apps/*.apk 1> /dev/null 2>&1; then
             echo "Downloading QA APK from Google Drive..."
@@ -114,9 +112,7 @@ jobs:
       - name: Setup iOS Driver & Simulator
         if: ${{ github.event.inputs.platform == 'ios' }}
         run: |
-          if ! appium driver list --installed | grep -q xcuitest; then
-            appium driver install xcuitest
-          fi
+          appium driver install xcuitest || true
           
           # Unpack iOS App if zipped
           for zipfile in apps/qa/*.zip apps/*.zip; do

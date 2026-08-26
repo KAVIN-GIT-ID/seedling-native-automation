@@ -81,9 +81,7 @@ jobs:
       - name: Setup Android Driver
         if: ${{ github.event.inputs.platform == 'android' }}
         run: |
-          if ! appium driver list --installed | grep -q uiautomator2; then
-            appium driver install uiautomator2
-          fi
+          appium driver install uiautomator2 || true
 
       - name: Ensure Android PROD APK Available
         if: ${{ github.event.inputs.platform == 'android' }}
@@ -99,9 +97,7 @@ jobs:
       - name: Setup iOS Driver & Simulator
         if: ${{ github.event.inputs.platform == 'ios' }}
         run: |
-          if ! appium driver list --installed | grep -q xcuitest; then
-            appium driver install xcuitest
-          fi
+          appium driver install xcuitest || true
           
           # Unpack iOS App if zipped
           for zipfile in apps/prod/*.zip apps/*.zip; do

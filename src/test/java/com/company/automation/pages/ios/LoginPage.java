@@ -7,38 +7,119 @@ import org.openqa.selenium.By;
 
 public class LoginPage extends BasePage implements ILoginPage {
 
-    // Optimized native iOS Class Chain locators
-    private final By usernameField = AppiumBy.iOSClassChain("**/XCUIElementTypeOther[`name CONTAINS 'Email or Phone'`][-1]");
-    private final By passwordField = AppiumBy.iOSClassChain("**/XCUIElementTypeOther[`name CONTAINS 'Password*'`][-1]");
-    private final By loginButton = AppiumBy.iOSClassChain("**/XCUIElementTypeOther[`name == 'Sign In'`]");
+    // Multi-strategy iOS locators with fallbacks for React Native views
+    private final By[] usernameLocators = new By[]{
+            AppiumBy.iOSNsPredicateString("type == 'XCUIElementTypeTextField'"),
+            AppiumBy.iOSClassChain("**/XCUIElementTypeTextField"),
+            AppiumBy.iOSClassChain("**/XCUIElementTypeOther[`name CONTAINS 'Email or Phone'`][-1]"),
+            AppiumBy.iOSNsPredicateString("name CONTAINS[c] 'Email' OR label CONTAINS[c] 'Email' OR name CONTAINS[c] 'Phone' OR label CONTAINS[c] 'Phone'"),
+            By.xpath("//XCUIElementTypeTextField | //XCUIElementTypeOther[contains(@name, 'Email') or contains(@label, 'Email') or contains(@name, 'Phone')]")
+    };
+
+    private final By[] passwordLocators = new By[]{
+            AppiumBy.iOSNsPredicateString("type == 'XCUIElementTypeSecureTextField'"),
+            AppiumBy.iOSClassChain("**/XCUIElementTypeSecureTextField"),
+            AppiumBy.iOSClassChain("**/XCUIElementTypeOther[`name CONTAINS 'Password'`][-1]"),
+            AppiumBy.iOSNsPredicateString("name CONTAINS[c] 'Password' OR label CONTAINS[c] 'Password'"),
+            By.xpath("//XCUIElementTypeSecureTextField | //XCUIElementTypeOther[contains(@name, 'Password') or contains(@label, 'Password')]")
+    };
+
+    private final By[] loginBtnLocators = new By[]{
+            AppiumBy.iOSNsPredicateString("type == 'XCUIElementTypeButton' AND (name CONTAINS[c] 'Sign In' OR label CONTAINS[c] 'Sign In' OR name CONTAINS[c] 'Log In' OR label CONTAINS[c] 'Log In')"),
+            AppiumBy.iOSClassChain("**/XCUIElementTypeButton[`name CONTAINS[c] 'Sign In' or label CONTAINS[c] 'Sign In'`]"),
+            AppiumBy.iOSClassChain("**/XCUIElementTypeOther[`name == 'Sign In'`]"),
+            By.xpath("//XCUIElementTypeButton[contains(@name, 'Sign In') or contains(@label, 'Sign In')] | //XCUIElementTypeOther[@name='Sign In']")
+    };
+
     private final By errorMessage = AppiumBy.accessibilityId("login-error-text");
+
+    private org.openqa.selenium.WebElement findFirstElement(By[] locators, int timeoutSeconds) {
+        long start = System.currentTimeMillis();
+        long end = start + (timeoutSeconds * 1000L);
+        while (System.currentTimeMillis() < end) {
+            for (By locator : locators) {
+                try {
+                    java.util.List<org.openqa.selenium.WebElement> list = driver().findElements(locator);
+                    if (!list.isEmpty() && list.get(0).isDisplayed()) {
+                        return list.get(0);
+                    }
+                } catch (Exception ignored) {}
+            }
+            try { Thread.sleep(500); } catch (InterruptedException ignored) {}
+        }
+        return null;
+    }
 
     @Override
     public void enterUsername(String username) {
-        tap(usernameField, "Username Field");
+        logStep("Resolving username field on iOS...");
+        org.openqa.selenium.WebElement element = findFirstElement(usernameLocators, 15);
+        if (element != null) {
+            try {
+                element.click();
+                element.clear();
+                element.sendKeys(username);
+                logStep("✅ Entered username into field");
+                return;
+            } catch (Exception e) {
+                logStep("Direct sendKeys failed, using Actions API fallback: " + e.getMessage());
+            }
+        } else {
+            logStep("⚠️ Username field not found by primary locators, attempting coordinate tap fallback at (207, 280)...");
+            tapByCoordinates(207, 280, "Username Field (Coordinates)");
+        }
+
         try {
-            type(usernameField, username, "Username Field");
-        } catch (Exception e) {
             new org.openqa.selenium.interactions.Actions(driver()).sendKeys(username).perform();
             logStep("Entered '" + username + "' via Actions API");
+        } catch (Exception e) {
+            logStep("Failed to enter username: " + e.getMessage());
         }
     }
 
     @Override
     public void enterPassword(String password) {
-        tap(passwordField, "Password Field");
+        logStep("Resolving password field on iOS...");
+        org.openqa.selenium.WebElement element = findFirstElement(passwordLocators, 10);
+        if (element != null) {
+            try {
+                element.click();
+                element.clear();
+                element.sendKeys(password);
+                logStep("✅ Entered password into field");
+                return;
+            } catch (Exception e) {
+                logStep("Direct sendKeys failed for password, using Actions API fallback: " + e.getMessage());
+            }
+        } else {
+            logStep("⚠️ Password field not found by primary locators, attempting coordinate tap fallback at (207, 360)...");
+            tapByCoordinates(207, 360, "Password Field (Coordinates)");
+        }
+
         try {
-            type(passwordField, password, "Password Field");
-        } catch (Exception e) {
             new org.openqa.selenium.interactions.Actions(driver()).sendKeys(password + "\n").perform();
             logStep("Entered '" + password + "' via Actions API and pressed Return");
+        } catch (Exception e) {
+            logStep("Failed to enter password: " + e.getMessage());
         }
     }
 
     @Override
     public void tapLogin() {
         dismissKeyboardIOS();
-        // Bypass BasePage's waitForClickable which times out on iOS XCUIElementTypeOther
+        logStep("Tapping Sign In / Login button on iOS...");
+        org.openqa.selenium.WebElement element = findFirstElement(loginBtnLocators, 5);
+        if (element != null) {
+            try {
+                element.click();
+                logStep("✅ Tapped Sign In button via locator");
+                return;
+            } catch (Exception e) {
+                logStep("Direct click failed for Sign In button: " + e.getMessage());
+            }
+        }
+
+        logStep("Bypassing locator — tapping Sign In button via coordinates (207, 541)");
         tapByCoordinates(207, 541, "Login Button (Coordinates)");
     }
 

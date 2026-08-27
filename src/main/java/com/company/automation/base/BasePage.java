@@ -31,6 +31,9 @@ public abstract class BasePage {
     protected void tap(By locator, String elementName) {
         try {
             getWait().waitForClickable(locator).click();
+        } catch (org.openqa.selenium.TimeoutException te) {
+            logStep("waitForClickable timed out for " + elementName + ", falling back to waitForVisible");
+            getWait().waitForVisible(locator).click();
         } catch (StaleElementReferenceException e) {
             try { Thread.sleep(500); } catch (InterruptedException ignored) {}
             getWait().waitForClickable(locator).click();

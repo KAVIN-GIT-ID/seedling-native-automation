@@ -24,7 +24,7 @@ pipeline {
         string(
             name: 'GDRIVE_FILE_ID',
             defaultValue: '1dDV9FrZieZXvqcirdp5Brm_pPrYzu1Mf',
-            description: 'Google Drive File ID or Share URL for Android APK (leave as default or paste new ID/URL whenever build changes)'
+            description: 'Google Drive File ID or Share URL for Android APK (leave default or paste new ID/URL)'
         )
         booleanParam(
             name: 'FORCE_FRESH_APP',
@@ -61,7 +61,6 @@ pipeline {
                         echo "ADB Version:" && adb --version
                     fi
                     
-                    # Clean previous run artifacts
                     rm -rf logs target appium.log emulator.log email-body.html
                     mkdir -p logs apps/qa config target/videos
                 '''
@@ -114,14 +113,15 @@ pipeline {
                     mkdir -p apps/qa
                     
                     if [ "${PLATFORM}" = "android" ]; then
-                        # Extract raw file ID if user pasted a full Google Drive URL
-                        RAW_ID=$(echo "${GDRIVE_FILE_ID}" | grep -oE "d/[a-zA-Z0-9_-]+" | cut -d'/' -f2 || true)
-                        if [ -z "$RAW_ID" ]; then
-                            RAW_ID=$(echo "${GDRIVE_FILE_ID}" | grep -oE "id=[a-zA-Z0-9_-]+" | cut -d'=' -f2 || true)
-                        fi
-                        if [ -z "$RAW_ID" ]; then
-                            RAW_ID="${GDRIVE_FILE_ID}"
-                        fi
+                        RAW_ID="${GDRIVE_FILE_ID}"
+                        case "$RAW_ID" in
+                            *d/*)
+                                RAW_ID=$(echo "$RAW_ID" | sed -n 's|.*d/\\([^/]*\\).*|\\1|p')
+                                ;;
+                            *id=*)
+                                RAW_ID=$(echo "$RAW_ID" | sed -n 's|.*id=\\([^&]*\\).*|\\1|p')
+                                ;;
+                        esac
                         echo "Resolved Google Drive ID: $RAW_ID"
 
                         if [ "${FORCE_FRESH_APP}" = "true" ] || ! ls apps/qa/*.apk apps/*.apk 1> /dev/null 2>&1; then
@@ -136,7 +136,6 @@ pipeline {
                             echo "Using existing cached APK in apps folder."
                         fi
                     elif [ "${PLATFORM}" = "ios" ]; then
-                        # Unpack iOS App if zipped
                         for zipfile in apps/qa/*.zip apps/*.zip; do
                             if [ -f "$zipfile" ]; then
                                 echo "Unpacking $zipfile into apps/qa/..."
@@ -156,16 +155,13 @@ pipeline {
         stage('Start Headless Emulator / Simulator & Appium') {
             steps {
                 sh '''
-                    # 1. Clean old processes
                     pkill -f appium 2>/dev/null || true
 
-                    # 2. Launch Appium Server
                     echo "Starting Appium Server on port 4723..."
                     nohup appium --log appium.log --port 4723 > /dev/null 2>&1 &
                     sleep 10
                     curl --retry 5 --retry-delay 2 --retry-connrefused http://127.0.0.1:4723/status || echo "Appium warming up..."
 
-                    # 3. Platform-specific device boot
                     if [ "${PLATFORM}" = "android" ]; then
                         adb emu kill 2>/dev/null || true
                         killall -9 qemu-system-x86_64 2>/dev/null || true
@@ -184,12 +180,10 @@ pipeline {
                         echo "Android emulator successfully booted!"
                         sleep 10
 
-                        # Dismiss system dialogs & configure settings
                         adb shell input keyevent 4 || true
                         adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS || true
                         adb shell settings put secure immersive_mode_confirmations confirmed || true
 
-                        # Pre-install APK & warm up React Native bundle
                         APK_PATH=$(find apps/qa apps -name "*.apk" 2>/dev/null | head -1)
                         echo "Pre-installing APK: $APK_PATH"
                         adb install -r "$APK_PATH" || true
@@ -200,33 +194,33 @@ pipeline {
                         adb shell am start -n "$PACKAGE/$ACTIVITY" || true
                         sleep 25
                         
-                        # Diagnostic snapshot
                         mkdir -p logs
                         adb shell screencap -p /sdcard/pre_test.png || true
                         adb pull /sdcard/pre_test.png logs/pre_test.png || true
                         
-                        # Stop app ready for fresh Appium test launch
                         adb shell am force-stop "$PACKAGE" || true
                         sleep 2
 
                     elif [ "${PLATFORM}" = "ios" ]; then
                         echo "Configuring iOS Simulator..."
-                        UDID=$(xcrun simctl list devices available 2>/dev/null | grep "iPhone 15" | head -1 | grep -oE "\([0-9A-F-]+\)" | tr -d "()" || true)
-                        if [ -z "$UDID" ]; then
-                            UDID=$(xcrun simctl list devices available 2>/dev/null | grep "iPhone" | head -1 | grep -oE "\([0-9A-F-]+\)" | tr -d "()" || true)
-                        fi
-                        if [ -n "$UDID" ]; then
-                            echo "Booting iOS Simulator UDID: $UDID"
-                            xcrun simctl boot $UDID || true
-                            xcrun simctl bootstatus $UDID -b || true
-                            for appdir in apps/qa/*.app apps/*.app; do
-                                if [ -d "$appdir" ]; then
-                                    echo "Pre-installing $appdir into simulator $UDID..."
-                                    xcrun simctl install $UDID "$appdir" || true
-                                fi
-                            done
+                        if command -v xcrun &> /dev/null; then
+                            UDID=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone 15/{print $2; exit}')
+                            if [ -z "$UDID" ]; then
+                                UDID=$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/{print $2; exit}')
+                            fi
+                            if [ -n "$UDID" ]; then
+                                echo "Booting iOS Simulator UDID: $UDID"
+                                xcrun simctl boot "$UDID" || true
+                                xcrun simctl bootstatus "$UDID" -b || true
+                                for appdir in apps/qa/*.app apps/*.app; do
+                                    if [ -d "$appdir" ]; then
+                                        echo "Pre-installing $appdir into simulator $UDID..."
+                                        xcrun simctl install "$UDID" "$appdir" || true
+                                    fi
+                                done
+                            fi
                         else
-                            echo "Notice: xcrun not detected on this agent (Ubuntu). Ensure tests target connected remote iOS device or run on Mac agent."
+                            echo "Notice: xcrun not available on Linux. iOS requires macOS runner."
                         fi
                     fi
                 '''
@@ -288,35 +282,8 @@ pipeline {
         stage('Send Email Notification') {
             steps {
                 sh '''
-                    node -e '
-                    const nodemailer = require("nodemailer");
-                    const fs = require("fs");
-
-                    async function main() {
-                        const htmlContent = fs.readFileSync("email-body.html", "utf8");
-                        const transporter = nodemailer.createTransport({
-                            host: "smtp.gmail.com",
-                            port: 465,
-                            secure: true,
-                            auth: {
-                                user: process.env.EMAIL_USER,
-                                pass: process.env.EMAIL_PASS
-                            }
-                        });
-
-                        const info = await transporter.sendMail({
-                            from: `"Seedling Native Automation" <${process.env.EMAIL_USER}>`,
-                            to: process.env.TL_EMAIL,
-                            subject: `Jenkins Mobile QA [${process.env.PLATFORM.toUpperCase()}] - Test Execution Report`,
-                            html: htmlContent
-                        });
-
-                        console.log("Email sent successfully: %s", info.messageId);
-                    }
-                    main().catch(err => {
-                        console.error("Failed to send email:", err.message);
-                    });
-                    ' || true
+                    npm install nodemailer --no-save --quiet || true
+                    node utils/send-email.js || true
                 '''
             }
         }

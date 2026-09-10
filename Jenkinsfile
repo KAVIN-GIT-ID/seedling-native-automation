@@ -10,7 +10,7 @@ pipeline {
         choice(
             name: 'PLATFORM',
             choices: ['android', 'ios'],
-            description: 'Target Mobile Platform'
+            description: ''
         )
         choice(
             name: 'COMPONENT',
@@ -19,17 +19,17 @@ pipeline {
                 'com.company.automation.tests.LoginTests',
                 'com.company.automation.tests.SeedlingCreationTests'
             ],
-            description: 'Test file to run on QA'
+            description: ''
         )
         string(
             name: 'GDRIVE_FILE_ID',
             defaultValue: '1dDV9FrZieZXvqcirdp5Brm_pPrYzu1Mf',
-            description: 'Google Drive File ID or Share URL for Android APK (leave default or paste new ID/URL)'
+            description: ''
         )
         booleanParam(
             name: 'FORCE_FRESH_APP',
             defaultValue: false,
-            description: 'Force re-download fresh APK from Google Drive (bypasses cache)'
+            description: ''
         )
     }
 

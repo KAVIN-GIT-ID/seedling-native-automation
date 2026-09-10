@@ -22,12 +22,12 @@ pipeline {
             description: ''
         )
         string(
-            name: 'GDRIVE_FILE_ID',
+            name: 'APP_DOWNLOAD_URL',
             defaultValue: '1dDV9FrZieZXvqcirdp5Brm_pPrYzu1Mf',
             description: ''
         )
         booleanParam(
-            name: 'FORCE_FRESH_APP',
+            name: 'REFRESH_BUILD_ARTIFACT',
             defaultValue: false,
             description: ''
         )
@@ -52,7 +52,8 @@ pipeline {
                     echo "=== ENVIRONMENT INFO ==="
                     echo "Selected Platform: ${PLATFORM}"
                     echo "Selected Component: ${COMPONENT}"
-                    echo "Google Drive APK ID: ${GDRIVE_FILE_ID}"
+                    echo "App Download URL / ID: ${APP_DOWNLOAD_URL}"
+                    echo "Refresh Build Artifact: ${REFRESH_BUILD_ARTIFACT}"
                     echo "Java Version:" && java -version
                     echo "Maven Version:" && mvn -v
                     echo "Node Version:" && node -v
@@ -113,7 +114,7 @@ pipeline {
                     mkdir -p apps/qa
                     
                     if [ "${PLATFORM}" = "android" ]; then
-                        RAW_ID="${GDRIVE_FILE_ID}"
+                        RAW_ID="${APP_DOWNLOAD_URL}"
                         case "$RAW_ID" in
                             *d/*)
                                 RAW_ID=$(echo "$RAW_ID" | sed -n 's|.*d/\\([^/]*\\).*|\\1|p')
@@ -122,18 +123,18 @@ pipeline {
                                 RAW_ID=$(echo "$RAW_ID" | sed -n 's|.*id=\\([^&]*\\).*|\\1|p')
                                 ;;
                         esac
-                        echo "Resolved Google Drive ID: $RAW_ID"
+                        echo "Resolved Artifact ID: $RAW_ID"
 
-                        if [ "${FORCE_FRESH_APP}" = "true" ] || ! ls apps/qa/*.apk apps/*.apk 1> /dev/null 2>&1; then
-                            echo "Downloading QA APK from Google Drive ID: $RAW_ID..."
+                        if [ "${REFRESH_BUILD_ARTIFACT}" = "true" ] || ! ls apps/qa/*.apk apps/*.apk 1> /dev/null 2>&1; then
+                            echo "Downloading QA APK from: $RAW_ID..."
                             if ! command -v gdown &> /dev/null; then
                                 npm install -g gdown || true
                             fi
                             gdown "$RAW_ID" -O apps/qa/seedling-dev.apk || \
                             curl -s -L "https://drive.google.com/uc?export=download&id=${RAW_ID}" -o apps/qa/seedling-dev.apk
-                            echo "APK download complete."
+                            echo "APK artifact retrieved successfully."
                         else
-                            echo "Using existing cached APK in apps folder."
+                            echo "Using existing cached APK artifact in apps folder."
                         fi
                     elif [ "${PLATFORM}" = "ios" ]; then
                         for zipfile in apps/qa/*.zip apps/*.zip; do

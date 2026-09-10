@@ -27,7 +27,7 @@ pipeline {
             description: ''
         )
         booleanParam(
-            name: 'REFRESH_BUILD_ARTIFACT',
+            name: 'FORCE_REINSTALL',
             defaultValue: false,
             description: ''
         )
@@ -52,8 +52,8 @@ pipeline {
                     echo "=== ENVIRONMENT INFO ==="
                     echo "Selected Platform: ${PLATFORM}"
                     echo "Selected Component: ${COMPONENT}"
-                    echo "App Download URL / ID: ${APP_DOWNLOAD_URL}"
-                    echo "Refresh Build Artifact: ${REFRESH_BUILD_ARTIFACT}"
+                    echo "App Download URL: ${APP_DOWNLOAD_URL}"
+                    echo "Force Reinstall: ${FORCE_REINSTALL}"
                     echo "Java Version:" && java -version
                     echo "Maven Version:" && mvn -v
                     echo "Node Version:" && node -v
@@ -125,7 +125,7 @@ pipeline {
                         esac
                         echo "Resolved Artifact ID: $RAW_ID"
 
-                        if [ "${REFRESH_BUILD_ARTIFACT}" = "true" ] || ! ls apps/qa/*.apk apps/*.apk 1> /dev/null 2>&1; then
+                        if [ "${FORCE_REINSTALL}" = "true" ] || ! ls apps/qa/*.apk apps/*.apk 1> /dev/null 2>&1; then
                             echo "Downloading QA APK from: $RAW_ID..."
                             if ! command -v gdown &> /dev/null; then
                                 npm install -g gdown || true

@@ -22,7 +22,7 @@ pipeline {
             description: ''
         )
         string(
-            name: 'APP_DOWNLOAD_URL',
+            name: 'APP_SOURCE',
             defaultValue: '1dDV9FrZieZXvqcirdp5Brm_pPrYzu1Mf',
             description: ''
         )
@@ -52,7 +52,7 @@ pipeline {
                     echo "=== ENVIRONMENT INFO ==="
                     echo "Selected Platform: ${PLATFORM}"
                     echo "Selected Component: ${COMPONENT}"
-                    echo "App Download URL: ${APP_DOWNLOAD_URL}"
+                    echo "App Source: ${APP_SOURCE}"
                     echo "Force Reinstall: ${FORCE_REINSTALL}"
                     echo "Java Version:" && java -version
                     echo "Maven Version:" && mvn -v
@@ -114,7 +114,7 @@ pipeline {
                     mkdir -p apps/qa
                     
                     if [ "${PLATFORM}" = "android" ]; then
-                        RAW_ID="${APP_DOWNLOAD_URL}"
+                        RAW_ID="${APP_SOURCE}"
                         case "$RAW_ID" in
                             *d/*)
                                 RAW_ID=$(echo "$RAW_ID" | sed -n 's|.*d/\\([^/]*\\).*|\\1|p')
